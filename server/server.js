@@ -8,8 +8,7 @@ const { Server } = require("socket.io");
 
 const connectDB = require("./config/db");
 
-// Routes (keep commented for now if not ready)
-// const authRoutes = require("./routes/authRoutes");
+const authRoutes = require("./routes/authRoutes");
 // const vehicleRoutes = require("./routes/vehicleRoutes");
 // const parkingLotRoutes = require("./routes/parkingLotRoutes");
 // const bookingRoutes = require("./routes/bookingRoutes");
@@ -60,7 +59,7 @@ app.get("/", (req, res) => {
   res.send("🚗 ParkEase Backend Running");
 });
 
-// app.use("/api/auth", authRoutes);
+app.use("/api/auth", authRoutes);
 // app.use("/api/vehicles", vehicleRoutes);
 // app.use("/api/parking-lots", parkingLotRoutes);
 // app.use("/api/bookings", bookingRoutes);
