@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       minlength: 6,
-      select: false, // never return password by default
+      select: false, 
     },
 
     role: {
@@ -45,7 +45,6 @@ const userSchema = new mongoose.Schema(
     emailVerificationToken: String,
     emailVerificationExpires: Date,
 
-    // Contact & preferences
     phone: {
       type: String,
       default: null,
@@ -81,10 +80,6 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-
-/* ============================
-   PASSWORD HASHING
-============================ */
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
@@ -93,9 +88,7 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-/* ============================
-   PASSWORD MATCH METHOD
-============================ */
+
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };

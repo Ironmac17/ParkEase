@@ -9,7 +9,7 @@ const { Server } = require("socket.io");
 const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
-// const vehicleRoutes = require("./routes/vehicleRoutes");
+const vehicleRoutes = require("./routes/vehicleRoutes");
 // const parkingLotRoutes = require("./routes/parkingLotRoutes");
 // const bookingRoutes = require("./routes/bookingRoutes");
 // const walletRoutes = require("./routes/walletRoutes");
@@ -46,7 +46,6 @@ initSocket(io);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(morgan("dev"));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -60,7 +59,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
-// app.use("/api/vehicles", vehicleRoutes);
+app.use("/api/vehicles", vehicleRoutes);
 // app.use("/api/parking-lots", parkingLotRoutes);
 // app.use("/api/bookings", bookingRoutes);
 // app.use("/api/wallet", walletRoutes);

@@ -1,9 +1,6 @@
 const User = require("../models/User");
 const generateJWT = require("../utils/generateJWT");
 
-/* =========================
-   REGISTER
-========================= */
 const register = async (req, res) => {
   const { username, email, password, role } = req.body;
 
@@ -34,9 +31,6 @@ const register = async (req, res) => {
   });
 };
 
-/* =========================
-   LOGIN
-========================= */
 const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -63,9 +57,6 @@ const login = async (req, res) => {
   });
 };
 
-/* =========================
-   GET ME
-========================= */
 const getMe = async (req, res) => {
   res.json(req.user);
 };
