@@ -151,9 +151,56 @@ const toggleSpotStatus = async (req, res) => {
   res.json(spot);
 };
 
+
+const getParkingSpots = async (req, res) => {
+  const { id: parkingLotId } = req.params;
+  const now = new Date();
+
+  // 1. Find expired held spots
+  const expiredSpots = await ParkingSpot.find({
+    parkingLot: parkingLotId,
+    status: "held",
+    holdExpiresAt: { $lt: now },
+  });
+
+  // 2. Release them
+  if (expiredSpots.length > 0) {
+    const expiredIds = expiredSpots.map((s) => s._id);
+
+    await ParkingSpot.updateMany(
+      { _id: { $in: expiredIds } },
+      {
+        $set: {
+          status: "available",
+          heldBy: null,
+          holdExpiresAt: null,
+        },
+      }
+    );
+
+    // 3. Emit socket updates (important)
+    expiredIds.forEach((spotId) => {
+      global.io
+        .to(`parking_lot_${parkingLotId}`)
+        .emit("spot_update", {
+          spotId,
+          status: "available",
+        });
+    });
+  }
+
+  // 4. Fetch all spots for the lot
+  const spots = await ParkingSpot.find({ parkingLot: parkingLotId }).sort({
+    label: 1,
+  });
+
+  res.json(spots);
+};
+
 module.exports = {
   addSpot,
   batchCreateSpots,
   deleteSpot,
   toggleSpotStatus,
+  getParkingSpots,
 };

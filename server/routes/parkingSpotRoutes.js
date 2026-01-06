@@ -6,6 +6,7 @@ const {
   batchCreateSpots,
   deleteSpot,
   toggleSpotStatus,
+  getParkingSpots
 } = require("../controllers/parkingSpotController");
 
 const protect = require("../middleware/authMiddleware");
@@ -35,5 +36,7 @@ router.patch(
   authorize("owner", "admin"),
   toggleSpotStatus
 );
+
+router.get("/:id/spots", getParkingSpots);
 
 module.exports = router;
