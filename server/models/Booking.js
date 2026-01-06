@@ -55,6 +55,15 @@ const bookingSchema = new mongoose.Schema(
       enum: ["wallet", "mock"],
       default: "wallet",
     },
+    extraAmountPaid: {
+      type: Number,
+      default: 0,
+    },
+
+    actualEndTime: {
+      type: Date,
+    },
+
 
     checkedInAt: Date,
     checkedOutAt: Date,
