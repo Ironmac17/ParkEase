@@ -10,7 +10,7 @@ const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
 const vehicleRoutes = require("./routes/vehicleRoutes");
-// const parkingLotRoutes = require("./routes/parkingLotRoutes");
+const parkingLotRoutes = require("./routes/parkingLotRoutes");
 // const bookingRoutes = require("./routes/bookingRoutes");
 // const walletRoutes = require("./routes/walletRoutes");
 // const ownerRoutes = require("./routes/ownerRoutes");
@@ -60,7 +60,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/vehicles", vehicleRoutes);
-// app.use("/api/parking-lots", parkingLotRoutes);
+app.use("/api/parking-lots", parkingLotRoutes);
 // app.use("/api/bookings", bookingRoutes);
 // app.use("/api/wallet", walletRoutes);
 // app.use("/api/owner", ownerRoutes);
