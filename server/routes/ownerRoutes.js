@@ -1,16 +1,18 @@
 const express = require("express");
 const router = express.Router();
 
-const { getOwnerStats } = require("../controllers/ownerController");
+const {
+  getOwnerStats,
+  getOwnerRevenue,
+  getOwnerLotAnalytics,
+} = require("../controllers/ownerController");
+
 const protect = require("../middleware/authMiddleware");
 const authorize = require("../middleware/roleMiddleware");
+router.use(protect, authorize("owner", "admin"));
 
-// Owner analytics
-router.get(
-  "/stats",
-  protect,
-  authorize("owner", "admin"),
-  getOwnerStats
-);
+router.get("/stats", getOwnerStats);
+router.get("/revenue", getOwnerRevenue);
+router.get("/lots", getOwnerLotAnalytics);
 
 module.exports = router;

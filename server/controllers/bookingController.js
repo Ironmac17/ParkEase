@@ -239,7 +239,12 @@ const cancelBooking = async (req, res) => {
 const extendBooking = async (req, res) => {
   const { newEndTime } = req.body;
 
+  if (!newEndTime) {
+    return res.status(400).json({ message: "newEndTime is required" });
+  }
+
   const booking = await Booking.findById(req.params.id);
+
   if (!booking) {
     return res.status(404).json({ message: "Booking not found" });
   }
@@ -249,34 +254,47 @@ const extendBooking = async (req, res) => {
   }
 
   if (booking.status !== "active") {
-    return res.status(400).json({ message: "Booking not active" });
+    return res.status(400).json({
+      message: "Only active bookings can be extended",
+    });
   }
 
-  if (newEndTime <= booking.endTime) {
-    return res.status(400).json({ message: "Invalid extension time" });
+  const newEnd = new Date(newEndTime);
+  if (newEnd <= booking.endTime) {
+    return res.status(400).json({
+      message: "New end time must be after current end time",
+    });
   }
 
+  // 🔹 Calculate extension cost
   const parkingLot = await ParkingLot.findById(booking.parkingLot);
 
-  const extraMs = new Date(newEndTime) - booking.endTime;
+  const extraMs = newEnd - booking.endTime;
   const extraMinutes = Math.ceil(extraMs / (1000 * 60));
-  const extraAmount = (parkingLot.baseRate / 60) * extraMinutes;
+  const ratePerMinute = parkingLot.baseRate / 60;
+  const extraAmount = extraMinutes * ratePerMinute;
 
-  await debitWallet({
-    userId: booking.user,
-    amount: extraAmount,
-    reason: "Booking extension",
-    bookingId: booking._id,
-  });
+  // 🔐 Debit wallet BEFORE updating booking
+  try {
+    await debitWallet({
+      userId: booking.user,
+      amount: extraAmount,
+      reason: "Booking extension",
+      bookingId: booking._id,
+    });
+  } catch (err) {
+    return res.status(400).json({ message: err.message });
+  }
 
-  booking.endTime = newEndTime;
+  // 🔄 Update booking
+  booking.endTime = newEnd;
   booking.amountPaid += extraAmount;
   await booking.save();
 
   res.json({
-    message: "Booking extended",
-    newEndTime,
-    extraAmount,
+    message: "Booking extended successfully",
+    newEndTime: booking.endTime,
+    extraAmountPaid: extraAmount,
   });
 };
 

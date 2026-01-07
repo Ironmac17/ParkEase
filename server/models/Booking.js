@@ -63,8 +63,6 @@ const bookingSchema = new mongoose.Schema(
     actualEndTime: {
       type: Date,
     },
-
-
     checkedInAt: Date,
     checkedOutAt: Date,
   },
