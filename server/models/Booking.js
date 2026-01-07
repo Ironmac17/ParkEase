@@ -70,5 +70,11 @@ const bookingSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+bookingSchema.index({ user: 1 });
+bookingSchema.index({ parkingLot: 1 });
+bookingSchema.index({ status: 1 });
+bookingSchema.index({ endTime: 1 });
+bookingSchema.index({ checkedOutAt: 1 });
+
 
 module.exports = mongoose.model("Booking", bookingSchema);

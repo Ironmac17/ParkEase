@@ -19,6 +19,10 @@ const createBooking = async (req, res) => {
   if (!spotId || !vehicleId || !startTime || !endTime) {
     return res.status(400).json({ message: "Missing required fields" });
   }
+  if (new Date(startTime) < new Date()) {
+    return res.status(400).json({ message: "Start time cannot be in the past" });
+  }
+
 
   const vehicle = await Vehicle.findById(vehicleId);
   if (!vehicle || vehicle.owner.toString() !== req.user._id.toString()) {
@@ -214,12 +218,12 @@ const cancelBooking = async (req, res) => {
   });
 
   await sendEmail({
-  to: req.user.email,
-  subject: "ParkEase Booking Cancelled",
-  html: cancellationEmail({
-    amount: booking.amountPaid,
-  }),
-});
+    to: req.user.email,
+    subject: "ParkEase Booking Cancelled",
+    html: cancellationEmail({
+      amount: booking.amountPaid,
+    }),
+  });
 
   // free spot
   const spot = await ParkingSpot.findById(booking.parkingSpot);
@@ -267,6 +271,16 @@ const extendBooking = async (req, res) => {
       message: "New end time must be after current end time",
     });
   }
+  const MAX_EXTENSION_HOURS = 12;
+
+  const extensionHours =
+    (newEnd - booking.endTime) / (1000 * 60 * 60);
+
+  if (extensionHours > MAX_EXTENSION_HOURS) {
+    return res
+      .status(400)
+      .json({ message: "Extension too long" });
+  }
 
   // 🔹 Calculate extension cost
   const parkingLot = await ParkingLot.findById(booking.parkingLot);
@@ -294,13 +308,13 @@ const extendBooking = async (req, res) => {
   await booking.save();
 
   await sendEmail({
-  to: req.user.email,
-  subject: "ParkEase Booking Extended",
-  html: extensionConfirmation({
-    newEnd: booking.endTime,
-    extra: extraAmount,
-  }),
-});
+    to: req.user.email,
+    subject: "ParkEase Booking Extended",
+    html: extensionConfirmation({
+      newEnd: booking.endTime,
+      extra: extraAmount,
+    }),
+  });
 
 
   res.json({

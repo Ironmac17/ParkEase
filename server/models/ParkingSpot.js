@@ -39,5 +39,8 @@ const parkingSpotSchema = new mongoose.Schema(
 );
 
 parkingSpotSchema.index({ parkingLot: 1, label: 1 }, { unique: true });
+parkingSpotSchema.index({ parkingLot: 1 });
+parkingSpotSchema.index({ status: 1 });
+parkingSpotSchema.index({ holdExpiresAt: 1 });
 
 module.exports = mongoose.model("ParkingSpot", parkingSpotSchema);

@@ -32,4 +32,7 @@ const walletTransactionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+walletTransactionSchema.index({ wallet: 1 });
+walletTransactionSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model("WalletTransaction", walletTransactionSchema);
