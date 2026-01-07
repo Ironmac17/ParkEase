@@ -63,7 +63,7 @@ app.get("/", (req, res) => {
   res.send("🚗 ParkEase Backend Running");
 });
 
-app.use("/api/auth", authLimiter);
+app.use("/api/auth", limiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/parking-lots", parkingLotRoutes);
