@@ -3,6 +3,8 @@ const ParkingSpot = require("../models/ParkingSpot");
 const Vehicle = require("../models/Vehicle");
 const ParkingLot = require("../models/ParkingLot");
 const { holdSpot, releaseSpot } = require("../utils/slotLock");
+const { debitWallet, creditWallet } = require("../utils/walletUtils");
+
 
 const createBooking = async (req, res) => {
   const { spotId, vehicleId, startTime, endTime } = req.body;
@@ -25,13 +27,29 @@ const createBooking = async (req, res) => {
       .json({ message: "Spot already held or unavailable" });
   }
 
-  // 3️⃣ Double-check spot is not closed
+  // 3️⃣ Spot safety check
   if (heldSpot.status === "closed") {
     await releaseSpot(spotId, req.user._id);
     return res.status(400).json({ message: "Spot is closed" });
   }
 
-  // 4️⃣ Create booking
+  // 4️⃣ Calculate booking amount (simple: baseRate)
+  const parkingLot = await ParkingLot.findById(heldSpot.parkingLot);
+  const bookingAmount = parkingLot.baseRate;
+
+  // 5️⃣ Debit wallet BEFORE creating booking
+  try {
+    await debitWallet({
+      userId: req.user._id,
+      amount: bookingAmount,
+      reason: "Parking booking payment",
+    });
+  } catch (err) {
+    await releaseSpot(spotId, req.user._id);
+    return res.status(400).json({ message: err.message });
+  }
+
+  // 6️⃣ Create booking
   const booking = await Booking.create({
     user: req.user._id,
     parkingLot: heldSpot.parkingLot,
@@ -39,11 +57,11 @@ const createBooking = async (req, res) => {
     vehicle: vehicleId,
     startTime,
     endTime,
-    amountPaid: 0, // mock / wallet later
-    paymentMethod: "mock",
+    amountPaid: bookingAmount,
+    paymentMethod: "wallet",
   });
 
-  // 5️⃣ Mark spot as occupied
+  // 7️⃣ Mark spot as occupied
   heldSpot.status = "occupied";
   heldSpot.heldBy = null;
   heldSpot.holdExpiresAt = null;
@@ -114,6 +132,7 @@ const checkInBooking = async (req, res) => {
 
 const checkOutBooking = async (req, res) => {
   const booking = await Booking.findById(req.params.id);
+
   if (!booking) {
     return res.status(404).json({ message: "Booking not found" });
   }
@@ -130,7 +149,6 @@ const checkOutBooking = async (req, res) => {
   booking.checkedOutAt = now;
   booking.actualEndTime = now;
 
-  // 🔹 Calculate overtime
   let extraAmount = 0;
 
   if (now > booking.endTime) {
@@ -138,19 +156,24 @@ const checkOutBooking = async (req, res) => {
 
     const overtimeMs = now - booking.endTime;
     const overtimeMinutes = Math.ceil(overtimeMs / (1000 * 60));
-
     const ratePerMinute = parkingLot.baseRate / 60;
-    extraAmount = overtimeMinutes * ratePerMinute;
 
+    extraAmount = overtimeMinutes * ratePerMinute;
     booking.extraAmountPaid = extraAmount;
 
-    // 🔔 wallet deduction will go here later
+    // 🔐 Debit wallet for overtime
+    await debitWallet({
+      userId: booking.user,
+      amount: extraAmount,
+      reason: "Overtime parking charge",
+      bookingId: booking._id,
+    });
   }
 
   booking.status = "completed";
   await booking.save();
 
-  // free the spot
+  // free spot
   const spot = await ParkingSpot.findById(booking.parkingSpot);
   spot.status = "available";
   await spot.save();
@@ -188,6 +211,14 @@ const cancelBooking = async (req, res) => {
   booking.status = "cancelled";
   await booking.save();
 
+  // refund wallet
+  await creditWallet({
+    userId: booking.user,
+    amount: booking.amountPaid,
+    reason: "Booking refund",
+    bookingId: booking._id,
+  });
+
   // free spot
   const spot = await ParkingSpot.findById(booking.parkingSpot);
   if (spot) {
@@ -202,7 +233,7 @@ const cancelBooking = async (req, res) => {
       });
   }
 
-  res.json({ message: "Booking cancelled" });
+  res.json({ message: "Booking cancelled and refunded" });
 };
 
 module.exports = {
