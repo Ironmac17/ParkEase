@@ -19,6 +19,7 @@ const walletRoutes = require("./routes/walletRoutes");
 // const festivalRoutes = require("./routes/festivalRoutes");
 // const paymentRoutes = require("./routes/paymentRoutes");
 // const notificationRoutes = require("./routes/notificationRoutes");
+const autoCheckoutBookings = require("./utils/autoCheckout");
 
 // Middleware
 // const errorHandler = require("./middleware/errorMiddleware");
@@ -54,6 +55,9 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+setInterval(() => {
+  autoCheckoutBookings();
+}, 2 * 60 * 1000);
 
 app.get("/", (req, res) => {
   res.send("🚗 ParkEase Backend Running");

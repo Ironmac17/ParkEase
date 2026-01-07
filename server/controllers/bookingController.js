@@ -236,6 +236,51 @@ const cancelBooking = async (req, res) => {
   res.json({ message: "Booking cancelled and refunded" });
 };
 
+const extendBooking = async (req, res) => {
+  const { newEndTime } = req.body;
+
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) {
+    return res.status(404).json({ message: "Booking not found" });
+  }
+
+  if (booking.user.toString() !== req.user._id.toString()) {
+    return res.status(403).json({ message: "Not authorized" });
+  }
+
+  if (booking.status !== "active") {
+    return res.status(400).json({ message: "Booking not active" });
+  }
+
+  if (newEndTime <= booking.endTime) {
+    return res.status(400).json({ message: "Invalid extension time" });
+  }
+
+  const parkingLot = await ParkingLot.findById(booking.parkingLot);
+
+  const extraMs = new Date(newEndTime) - booking.endTime;
+  const extraMinutes = Math.ceil(extraMs / (1000 * 60));
+  const extraAmount = (parkingLot.baseRate / 60) * extraMinutes;
+
+  await debitWallet({
+    userId: booking.user,
+    amount: extraAmount,
+    reason: "Booking extension",
+    bookingId: booking._id,
+  });
+
+  booking.endTime = newEndTime;
+  booking.amountPaid += extraAmount;
+  await booking.save();
+
+  res.json({
+    message: "Booking extended",
+    newEndTime,
+    extraAmount,
+  });
+};
+
+
 module.exports = {
   createBooking,
   getBookings,
@@ -243,4 +288,5 @@ module.exports = {
   checkInBooking,
   checkOutBooking,
   cancelBooking,
+  extendBooking
 };

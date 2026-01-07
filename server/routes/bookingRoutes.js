@@ -8,6 +8,7 @@ const {
   checkInBooking,
   checkOutBooking,
   cancelBooking,
+  extendBooking
 } = require("../controllers/bookingController");
 
 const protect = require("../middleware/authMiddleware");
@@ -27,5 +28,7 @@ router.post("/:id/check-in", checkInBooking);
 router.post("/:id/check-out", checkOutBooking);
 // cancel booking
 router.post("/:id/cancel", cancelBooking);
+//extend booking
+router.post("/:id/extend", extendBooking);
 
 module.exports = router;
