@@ -4,6 +4,13 @@ const Vehicle = require("../models/Vehicle");
 const ParkingLot = require("../models/ParkingLot");
 const { holdSpot, releaseSpot } = require("../utils/slotLock");
 const { debitWallet, creditWallet } = require("../utils/walletUtils");
+const { sendEmail } = require("../utils/emailService");
+const {
+  bookingConfirmation,
+  extensionConfirmation,
+  checkoutSummary,
+  cancellationEmail,
+} = require("../utils/emailTemplates");
 
 
 const createBooking = async (req, res) => {
@@ -13,31 +20,24 @@ const createBooking = async (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
-  // 1️⃣ Verify vehicle belongs to user
   const vehicle = await Vehicle.findById(vehicleId);
   if (!vehicle || vehicle.owner.toString() !== req.user._id.toString()) {
     return res.status(403).json({ message: "Invalid vehicle" });
   }
 
-  // 2️⃣ Hold the spot atomically
   const heldSpot = await holdSpot(spotId, req.user._id);
   if (!heldSpot) {
-    return res
-      .status(409)
-      .json({ message: "Spot already held or unavailable" });
+    return res.status(409).json({ message: "Spot unavailable" });
   }
 
-  // 3️⃣ Spot safety check
   if (heldSpot.status === "closed") {
     await releaseSpot(spotId, req.user._id);
     return res.status(400).json({ message: "Spot is closed" });
   }
 
-  // 4️⃣ Calculate booking amount (simple: baseRate)
   const parkingLot = await ParkingLot.findById(heldSpot.parkingLot);
   const bookingAmount = parkingLot.baseRate;
 
-  // 5️⃣ Debit wallet BEFORE creating booking
   try {
     await debitWallet({
       userId: req.user._id,
@@ -49,7 +49,6 @@ const createBooking = async (req, res) => {
     return res.status(400).json({ message: err.message });
   }
 
-  // 6️⃣ Create booking
   const booking = await Booking.create({
     user: req.user._id,
     parkingLot: heldSpot.parkingLot,
@@ -61,21 +60,29 @@ const createBooking = async (req, res) => {
     paymentMethod: "wallet",
   });
 
-  // 7️⃣ Mark spot as occupied
+  // 🔔 email (non-blocking)
+  sendEmail({
+    to: req.user.email,
+    subject: "ParkEase Booking Confirmed",
+    html: bookingConfirmation({
+      name: req.user.username,
+      lot: parkingLot.name,
+      spot: heldSpot.label,
+      start: startTime,
+      end: endTime,
+      amount: bookingAmount,
+    }),
+  });
+
   heldSpot.status = "occupied";
   heldSpot.heldBy = null;
   heldSpot.holdExpiresAt = null;
   await heldSpot.save();
 
-  // 🔔 Socket updates
-  global.io
-    .to(`parking_lot_${heldSpot.parkingLot}`)
-    .emit("spot_update", {
-      spotId: heldSpot._id,
-      status: "occupied",
-    });
-
-  global.io.to(`user_${req.user._id}`).emit("booking_update", booking);
+  global.io.to(`parking_lot_${heldSpot.parkingLot}`).emit("spot_update", {
+    spotId: heldSpot._id,
+    status: "occupied",
+  });
 
   res.status(201).json(booking);
 };
@@ -131,13 +138,9 @@ const checkInBooking = async (req, res) => {
 
 
 const checkOutBooking = async (req, res) => {
-  const booking = await Booking.findById(req.params.id);
+  const booking = await Booking.findById(req.params.id).populate("user");
 
-  if (!booking) {
-    return res.status(404).json({ message: "Booking not found" });
-  }
-
-  if (booking.user.toString() !== req.user._id.toString()) {
+  if (!booking || booking.user._id.toString() !== req.user._id.toString()) {
     return res.status(403).json({ message: "Not authorized" });
   }
 
@@ -150,20 +153,14 @@ const checkOutBooking = async (req, res) => {
   booking.actualEndTime = now;
 
   let extraAmount = 0;
-
   if (now > booking.endTime) {
-    const parkingLot = await ParkingLot.findById(booking.parkingLot);
-
-    const overtimeMs = now - booking.endTime;
-    const overtimeMinutes = Math.ceil(overtimeMs / (1000 * 60));
-    const ratePerMinute = parkingLot.baseRate / 60;
-
-    extraAmount = overtimeMinutes * ratePerMinute;
+    const lot = await ParkingLot.findById(booking.parkingLot);
+    const mins = Math.ceil((now - booking.endTime) / 60000);
+    extraAmount = (lot.baseRate / 60) * mins;
     booking.extraAmountPaid = extraAmount;
 
-    // 🔐 Debit wallet for overtime
     await debitWallet({
-      userId: booking.user,
+      userId: booking.user._id,
       amount: extraAmount,
       reason: "Overtime parking charge",
       bookingId: booking._id,
@@ -173,23 +170,20 @@ const checkOutBooking = async (req, res) => {
   booking.status = "completed";
   await booking.save();
 
-  // free spot
   const spot = await ParkingSpot.findById(booking.parkingSpot);
   spot.status = "available";
   await spot.save();
 
-  global.io
-    .to(`parking_lot_${booking.parkingLot}`)
-    .emit("spot_update", {
-      spotId: spot._id,
-      status: "available",
-    });
-
-  res.json({
-    message: "Checked out successfully",
-    extraAmountPaid: extraAmount,
-    booking,
+  sendEmail({
+    to: booking.user.email,
+    subject: "ParkEase Checkout Summary",
+    html: checkoutSummary({
+      total: booking.amountPaid + (booking.extraAmountPaid || 0),
+      extra: booking.extraAmountPaid || 0,
+    }),
   });
+
+  res.json({ message: "Checked out", extraAmountPaid: extraAmount });
 };
 
 
@@ -218,6 +212,14 @@ const cancelBooking = async (req, res) => {
     reason: "Booking refund",
     bookingId: booking._id,
   });
+
+  await sendEmail({
+  to: req.user.email,
+  subject: "ParkEase Booking Cancelled",
+  html: cancellationEmail({
+    amount: booking.amountPaid,
+  }),
+});
 
   // free spot
   const spot = await ParkingSpot.findById(booking.parkingSpot);
@@ -290,6 +292,16 @@ const extendBooking = async (req, res) => {
   booking.endTime = newEnd;
   booking.amountPaid += extraAmount;
   await booking.save();
+
+  await sendEmail({
+  to: req.user.email,
+  subject: "ParkEase Booking Extended",
+  html: extensionConfirmation({
+    newEnd: booking.endTime,
+    extra: extraAmount,
+  }),
+});
+
 
   res.json({
     message: "Booking extended successfully",
