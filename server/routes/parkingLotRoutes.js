@@ -14,7 +14,7 @@ const authorize = require("../middleware/roleMiddleware");
 
 // Public
 router.get("/", getParkingLots);
-router.get("/:id", getParkingLotById);
+
 
 // Owner
 router.post(
@@ -37,5 +37,7 @@ router.patch(
   authorize("owner", "admin"),
   updateParkingLot
 );
+
+router.get("/:id", getParkingLotById);
 
 module.exports = router;

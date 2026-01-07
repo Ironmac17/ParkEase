@@ -3,6 +3,7 @@ const ParkingSpot = require("../models/ParkingSpot");
 const ParkingLot = require("../models/ParkingLot");
 const { debitWallet } = require("./walletUtils");
 const { sendEmail } = require("./emailService");
+const { calculateAmount } = require("./pricingUtils");
 const { checkoutSummary } = require("./emailTemplates");
 
 const autoCheckoutBookings = async () => {
@@ -19,11 +20,11 @@ const autoCheckoutBookings = async () => {
       const parkingLot = await ParkingLot.findById(booking.parkingLot);
       if (!parkingLot) continue;
 
-      // 2️⃣ Calculate overtime
-      const overtimeMs = now - booking.endTime;
-      const overtimeMinutes = Math.ceil(overtimeMs / (1000 * 60));
-      const ratePerMinute = parkingLot.baseRate / 60;
-      const extraAmount = overtimeMinutes * ratePerMinute;
+      const extraAmount = await calculateAmount({
+        parkingLot,
+        fromTime: booking.endTime,
+        toTime: now,
+      });
 
       // 3️⃣ Update booking
       booking.status = "completed";

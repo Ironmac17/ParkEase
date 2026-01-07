@@ -2,10 +2,33 @@ const ParkingLot = require("../models/ParkingLot");
 const ParkingSpot = require("../models/ParkingSpot");
 
 const createParkingLot = async (req, res) => {
-  const { name, address, location, baseRate } = req.body;
+  const {
+    name,
+    address,
+    location,
+    baseRate,
+    weekendMultiplier,
+    festivalMultiplier,
+  } = req.body;
 
   if (!name || !address || !location || !baseRate) {
-    return res.status(400).json({ message: "All fields are required" });
+    return res.status(400).json({ message: "All required fields missing" });
+  }
+
+  if (baseRate <= 0) {
+    return res.status(400).json({ message: "Base rate must be positive" });
+  }
+
+  if (weekendMultiplier && weekendMultiplier < 1) {
+    return res
+      .status(400)
+      .json({ message: "Weekend multiplier must be ≥ 1" });
+  }
+
+  if (festivalMultiplier && festivalMultiplier < 1) {
+    return res
+      .status(400)
+      .json({ message: "Festival multiplier must be ≥ 1" });
   }
 
   const parkingLot = await ParkingLot.create({
@@ -13,6 +36,8 @@ const createParkingLot = async (req, res) => {
     address,
     location,
     baseRate,
+    weekendMultiplier,
+    festivalMultiplier,
     owner: req.user._id,
   });
 
@@ -21,7 +46,6 @@ const createParkingLot = async (req, res) => {
 
 const getParkingLots = async (req, res) => {
   const lots = await ParkingLot.find({ isActive: true }).lean();
-
   const lotIds = lots.map((l) => l._id);
 
   const spots = await ParkingSpot.aggregate([
@@ -43,10 +67,12 @@ const getParkingLots = async (req, res) => {
   ]);
 
   const statsMap = {};
-  spots.forEach((s) => (statsMap[s._id.toString()] = s));
+  spots.forEach((s) => {
+    statsMap[s._id.toString()] = s;
+  });
 
   const response = lots.map((lot) => {
-    const stats = statsMap[lot._id.toString()] || {
+    const s = statsMap[lot._id.toString()] || {
       totalSpots: 0,
       freeSpots: 0,
       evSpots: 0,
@@ -55,16 +81,14 @@ const getParkingLots = async (req, res) => {
     return {
       ...lot,
       stats: {
-        totalSpots: stats.totalSpots,
-        freeSpots: stats.freeSpots,
-        evSpots: stats.evSpots,
+        totalSpots: s.totalSpots,
+        freeSpots: s.freeSpots,
+        evSpots: s.evSpots,
         occupancyRate:
-          stats.totalSpots === 0
+          s.totalSpots === 0
             ? 0
             : Math.round(
-                ((stats.totalSpots - stats.freeSpots) /
-                  stats.totalSpots) *
-                  100
+                ((s.totalSpots - s.freeSpots) / s.totalSpots) * 100
               ),
       },
     };
@@ -118,7 +142,6 @@ const getParkingLotById = async (req, res) => {
 
 const getOwnerParkingLots = async (req, res) => {
   const lots = await ParkingLot.find({ owner: req.user._id });
-
   res.json(lots);
 };
 
@@ -133,9 +156,39 @@ const updateParkingLot = async (req, res) => {
     return res.status(403).json({ message: "Not authorized" });
   }
 
-  Object.assign(lot, req.body);
-  await lot.save();
+  const allowedUpdates = [
+    "name",
+    "address",
+    "location",
+    "baseRate",
+    "weekendMultiplier",
+    "festivalMultiplier",
+    "isActive",
+  ];
 
+  allowedUpdates.forEach((field) => {
+    if (req.body[field] !== undefined) {
+      lot[field] = req.body[field];
+    }
+  });
+
+  if (lot.baseRate <= 0) {
+    return res.status(400).json({ message: "Base rate must be positive" });
+  }
+
+  if (lot.weekendMultiplier < 1) {
+    return res
+      .status(400)
+      .json({ message: "Weekend multiplier must be ≥ 1" });
+  }
+
+  if (lot.festivalMultiplier < 1) {
+    return res
+      .status(400)
+      .json({ message: "Festival multiplier must be ≥ 1" });
+  }
+
+  await lot.save();
   res.json(lot);
 };
 

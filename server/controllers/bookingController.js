@@ -2,6 +2,7 @@ const Booking = require("../models/Booking");
 const ParkingSpot = require("../models/ParkingSpot");
 const Vehicle = require("../models/Vehicle");
 const ParkingLot = require("../models/ParkingLot");
+const { calculateAmount } = require("../utils/pricingUtils");
 const { holdSpot, releaseSpot } = require("../utils/slotLock");
 const { debitWallet, creditWallet } = require("../utils/walletUtils");
 const { sendEmail } = require("../utils/emailService");
@@ -22,7 +23,12 @@ const createBooking = async (req, res) => {
   if (new Date(startTime) < new Date()) {
     return res.status(400).json({ message: "Start time cannot be in the past" });
   }
-
+  
+  if (new Date(endTime) <= new Date(startTime)) {
+    return res.status(400).json({
+      message: "End time must be after start time",
+    });
+  }
 
   const vehicle = await Vehicle.findById(vehicleId);
   if (!vehicle || vehicle.owner.toString() !== req.user._id.toString()) {
@@ -40,7 +46,11 @@ const createBooking = async (req, res) => {
   }
 
   const parkingLot = await ParkingLot.findById(heldSpot.parkingLot);
-  const bookingAmount = parkingLot.baseRate;
+  const bookingAmount = await calculateAmount({
+    parkingLot,
+    fromTime: new Date(startTime),
+    toTime: new Date(endTime),
+  });
 
   try {
     await debitWallet({
@@ -152,15 +162,21 @@ const checkOutBooking = async (req, res) => {
     return res.status(400).json({ message: "Booking not active" });
   }
 
+  const parkingLot = await ParkingLot.findById(booking.parkingLot);
+
   const now = new Date();
   booking.checkedOutAt = now;
   booking.actualEndTime = now;
 
   let extraAmount = 0;
+
   if (now > booking.endTime) {
-    const lot = await ParkingLot.findById(booking.parkingLot);
-    const mins = Math.ceil((now - booking.endTime) / 60000);
-    extraAmount = (lot.baseRate / 60) * mins;
+    extraAmount = await calculateAmount({
+      parkingLot,
+      fromTime: booking.endTime,
+      toTime: now,
+    });
+
     booking.extraAmountPaid = extraAmount;
 
     await debitWallet({
@@ -182,12 +198,15 @@ const checkOutBooking = async (req, res) => {
     to: booking.user.email,
     subject: "ParkEase Checkout Summary",
     html: checkoutSummary({
-      total: booking.amountPaid + (booking.extraAmountPaid || 0),
-      extra: booking.extraAmountPaid || 0,
+      total: booking.amountPaid + extraAmount,
+      extra: extraAmount,
     }),
   });
 
-  res.json({ message: "Checked out", extraAmountPaid: extraAmount });
+  res.json({
+    message: "Checked out successfully",
+    extraAmountPaid: extraAmount,
+  });
 };
 
 
@@ -217,7 +236,7 @@ const cancelBooking = async (req, res) => {
     bookingId: booking._id,
   });
 
-  await sendEmail({
+  sendEmail({
     to: req.user.email,
     subject: "ParkEase Booking Cancelled",
     html: cancellationEmail({
@@ -285,10 +304,11 @@ const extendBooking = async (req, res) => {
   // 🔹 Calculate extension cost
   const parkingLot = await ParkingLot.findById(booking.parkingLot);
 
-  const extraMs = newEnd - booking.endTime;
-  const extraMinutes = Math.ceil(extraMs / (1000 * 60));
-  const ratePerMinute = parkingLot.baseRate / 60;
-  const extraAmount = extraMinutes * ratePerMinute;
+  const extraAmount = await calculateAmount({
+    parkingLot,
+    fromTime: booking.endTime,
+    toTime: newEnd,
+  });
 
   // 🔐 Debit wallet BEFORE updating booking
   try {
@@ -307,7 +327,7 @@ const extendBooking = async (req, res) => {
   booking.amountPaid += extraAmount;
   await booking.save();
 
-  await sendEmail({
+  sendEmail({
     to: req.user.email,
     subject: "ParkEase Booking Extended",
     html: extensionConfirmation({

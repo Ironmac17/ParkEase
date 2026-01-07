@@ -34,6 +34,19 @@ const parkingLotSchema = new mongoose.Schema(
     baseRate: {
       type: Number,
       required: true,
+      min: 1,
+    },
+
+    weekendMultiplier: {
+      type: Number,
+      default: 1.2, 
+      min: 1,
+    },
+
+    festivalMultiplier: {
+      type: Number,
+      default: 1.5,
+      min: 1,
     },
 
     isActive: {
