@@ -12,46 +12,64 @@ const {
   checkoutSummary,
   cancellationEmail,
 } = require("../utils/emailTemplates");
+const { generateBookingQR } = require("../utils/qrUtils");
 
 
 const createBooking = async (req, res) => {
   const { spotId, vehicleId, startTime, endTime } = req.body;
 
+  // 1️⃣ Basic validations
   if (!spotId || !vehicleId || !startTime || !endTime) {
     return res.status(400).json({ message: "Missing required fields" });
   }
-  if (new Date(startTime) < new Date()) {
+
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+  const now = new Date();
+
+  if (start < now) {
     return res.status(400).json({ message: "Start time cannot be in the past" });
   }
-  
-  if (new Date(endTime) <= new Date(startTime)) {
+
+  if (end <= start) {
     return res.status(400).json({
       message: "End time must be after start time",
     });
   }
 
+  // 2️⃣ Verify vehicle ownership
   const vehicle = await Vehicle.findById(vehicleId);
   if (!vehicle || vehicle.owner.toString() !== req.user._id.toString()) {
     return res.status(403).json({ message: "Invalid vehicle" });
   }
 
+  // 3️⃣ Atomically hold parking spot
   const heldSpot = await holdSpot(spotId, req.user._id);
   if (!heldSpot) {
     return res.status(409).json({ message: "Spot unavailable" });
   }
 
+  // Safety: release spot if closed
   if (heldSpot.status === "closed") {
     await releaseSpot(spotId, req.user._id);
     return res.status(400).json({ message: "Spot is closed" });
   }
 
+  // 4️⃣ Calculate booking amount using dynamic pricing
   const parkingLot = await ParkingLot.findById(heldSpot.parkingLot);
+
   const bookingAmount = await calculateAmount({
     parkingLot,
-    fromTime: new Date(startTime),
-    toTime: new Date(endTime),
+    fromTime: start,
+    toTime: end,
   });
 
+  if (bookingAmount <= 0) {
+    await releaseSpot(spotId, req.user._id);
+    return res.status(400).json({ message: "Invalid booking amount" });
+  }
+
+  // 5️⃣ Debit wallet BEFORE creating booking
   try {
     await debitWallet({
       userId: req.user._id,
@@ -63,18 +81,31 @@ const createBooking = async (req, res) => {
     return res.status(400).json({ message: err.message });
   }
 
+  // 6️⃣ Create booking
   const booking = await Booking.create({
     user: req.user._id,
     parkingLot: heldSpot.parkingLot,
     parkingSpot: heldSpot._id,
     vehicle: vehicleId,
-    startTime,
-    endTime,
+    startTime: start,
+    endTime: end,
     amountPaid: bookingAmount,
     paymentMethod: "wallet",
+    status: "confirmed",
   });
 
-  // 🔔 email (non-blocking)
+  // 7️⃣ Generate QR code for booking
+  const qrCode = await generateBookingQR({
+    bookingId: booking._id,
+    userId: booking.user,
+    spotId: booking.parkingSpot,
+    validTill: booking.endTime,
+  });
+
+  booking.qrCode = qrCode;
+  await booking.save();
+
+  // 8️⃣ Send confirmation email (non-blocking)
   sendEmail({
     to: req.user.email,
     subject: "ParkEase Booking Confirmed",
@@ -82,22 +113,25 @@ const createBooking = async (req, res) => {
       name: req.user.username,
       lot: parkingLot.name,
       spot: heldSpot.label,
-      start: startTime,
-      end: endTime,
+      start,
+      end,
       amount: bookingAmount,
     }),
   });
 
+  // 9️⃣ Mark spot as occupied
   heldSpot.status = "occupied";
   heldSpot.heldBy = null;
   heldSpot.holdExpiresAt = null;
   await heldSpot.save();
 
+  // 🔔 Real-time update
   global.io.to(`parking_lot_${heldSpot.parkingLot}`).emit("spot_update", {
     spotId: heldSpot._id,
     status: "occupied",
   });
 
+  // 🔟 Final response
   res.status(201).json(booking);
 };
 

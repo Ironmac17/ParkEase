@@ -37,7 +37,9 @@ const bookingSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
-
+    qrCode: {
+      type: String, 
+    },
     status: {
       type: String,
       enum: ["confirmed", "active", "completed", "cancelled"],
