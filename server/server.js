@@ -16,9 +16,7 @@ const bookingRoutes = require("./routes/bookingRoutes");
 const walletRoutes = require("./routes/walletRoutes");
 const ownerRoutes = require("./routes/ownerRoutes");
 const adminRoutes = require("./routes/adminRoutes");
-// const festivalRoutes = require("./routes/festivalRoutes");
-// const paymentRoutes = require("./routes/paymentRoutes");
-// const notificationRoutes = require("./routes/notificationRoutes");
+const festivalRoutes = require("./routes/festivalRoutes");
 const autoCheckoutBookings = require("./utils/autoCheckout");
 
 // Middleware
@@ -72,9 +70,7 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/owner", ownerRoutes);
 app.use("/api/admin", adminRoutes);
-// app.use("/api/festivals", festivalRoutes);
-// app.use("/api/payment", paymentRoutes);
-// app.use("/api/notifications", notificationRoutes);
+app.use("/api/festivals", festivalRoutes);
 
 // app.use(errorHandler);
 
