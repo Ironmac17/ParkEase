@@ -11,7 +11,7 @@ const Home = () => {
   return (
     <div className="bg-black">
       <Hero
-        onBook={() => navigate("/")}
+        onBook={() => navigate("/discover")}
         onLogin={() => navigate("/login")}
       />
       <TrustSection />
