@@ -1,40 +1,14 @@
-import { Routes, Route } from "react-router-dom";
-import Home from "../pages/public/Home";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-// placeholders for now
-const Login = () => <div className="text-white p-20">Login</div>;
-const Register = () => <div className="text-white p-20">Register</div>;
-const Discover = () => <div className="text-white p-20">Discover Parking</div>;
-const BookSlot = () => <div className="text-white p-20">Book Slot</div>;
+export default function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
 
-import ProtectedRoute from "./ProtectedRoute";
+  if (loading) return null; // or spinner later
 
-export default function AppRoutes() {
-  return (
-    <Routes>
-      {/* Public */}
-      <Route path="/" element={<Home />} />
-      <Route path="/discover" element={<Discover />} />
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
-      {/* Auth */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-
-      {/* Protected */}
-      <Route
-        path="/book/:lotId/:spotId"
-        element={
-          <ProtectedRoute>
-            <BookSlot />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Fallback */}
-      <Route
-        path="*"
-        element={<div className="text-white p-20">Page not found</div>}
-      />
-    </Routes>
-  );
+  return children;
 }
