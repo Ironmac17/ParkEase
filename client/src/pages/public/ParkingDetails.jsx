@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
-import socket from "../../sockets/socket";
+import socket from "../../hooks/useSocket";
 
 export default function ParkingDetails() {
   const { id } = useParams();
@@ -11,20 +11,18 @@ export default function ParkingDetails() {
 
   const [lot, setLot] = useState(null);
   const [spots, setSpots] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // booking inputs
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [vehicleId, setVehicleId] = useState("");
 
-  // fetch lot + spots
   useEffect(() => {
     fetchData();
 
     socket.emit("join_parking_lot", id);
-
     socket.on("spot_update", handleSpotUpdate);
 
     return () => {
@@ -35,13 +33,15 @@ export default function ParkingDetails() {
 
   const fetchData = async () => {
     try {
-      const [lotRes, spotRes] = await Promise.all([
+      const [lotRes, spotRes, vehicleRes] = await Promise.all([
         axios.get(`/parking-lots/${id}`),
         axios.get(`/parking-spots?parkingLot=${id}`),
+        user ? axios.get("/vehicles") : Promise.resolve({ data: [] }),
       ]);
 
       setLot(lotRes.data);
       setSpots(spotRes.data);
+      setVehicles(vehicleRes.data);
     } finally {
       setLoading(false);
     }
@@ -60,7 +60,7 @@ export default function ParkingDetails() {
     setSelectedSpot(spot);
   };
 
-  const proceedToCheckout = async () => {
+  const proceedToCheckout = () => {
     if (!user) {
       navigate("/login");
       return;
@@ -71,23 +71,25 @@ export default function ParkingDetails() {
       return;
     }
 
-    try {
-      await axios.post(
-        `/parking-lots/${id}/spots/${selectedSpot._id}/hold`
-      );
-
-      navigate("/checkout", {
-        state: {
-          spotId: selectedSpot._id,
-          parkingLotId: id,
-          startTime,
-          endTime,
-          vehicleId,
-        },
-      });
-    } catch (err) {
-      alert("Spot already taken");
+    if (new Date(startTime) < new Date()) {
+      alert("Start time cannot be in the past");
+      return;
     }
+
+    if (new Date(endTime) <= new Date(startTime)) {
+      alert("End time must be after start time");
+      return;
+    }
+
+    navigate("/checkout", {
+      state: {
+        spotId: selectedSpot._id,
+        parkingLotId: id,
+        startTime,
+        endTime,
+        vehicleId,
+      },
+    });
   };
 
   if (loading) {
@@ -171,7 +173,7 @@ export default function ParkingDetails() {
             className="w-full bg-black border border-white/10 px-3 py-2 rounded"
           >
             <option value="">Select Vehicle</option>
-            {user?.vehicles?.map((v) => (
+            {vehicles.map((v) => (
               <option key={v._id} value={v._id}>
                 {v.plate}
               </option>

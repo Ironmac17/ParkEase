@@ -12,7 +12,8 @@ import Register from "../pages/auth/Register";
 
 // // user
 // import Dashboard from "../pages/user/Dashboard";
-// import MyBookings from "../pages/user/MyBookings";
+import Checkout from "../pages/user/Checkout";
+import BookingSuccess from "../pages/user/BookingSuccess";
 // import Wallet from "../pages/user/Wallet";
 
 // // owner
@@ -36,14 +37,24 @@ const AppRoutes = () => {
       <Route path="/discover" element={<Discover />} />
 
       {/* User */}
-      {/* <Route
-        path="/dashboard"
+      <Route
+        path="/checkout"
         element={
           <ProtectedRoute roles={["user", "owner", "admin"]}>
-            <Dashboard />
+            <Checkout />
           </ProtectedRoute>
         }
-      /> */}
+      />
+
+      <Route
+        path="/booking-success/:id"
+        element={
+          <ProtectedRoute roles={["user", "owner", "admin"]}>
+            <BookingSuccess />
+          </ProtectedRoute>
+        }
+      />
+
       {/* <Route
         path="/bookings"
         element={
