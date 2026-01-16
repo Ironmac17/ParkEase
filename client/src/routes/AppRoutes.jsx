@@ -11,7 +11,6 @@ import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 
 // // user
-// import Dashboard from "../pages/user/Dashboard";
 import Checkout from "../pages/user/Checkout";
 import BookingSuccess from "../pages/user/BookingSuccess";
 import MyBookings from "../pages/user/MyBookings";
