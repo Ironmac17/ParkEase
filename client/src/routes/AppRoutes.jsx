@@ -16,7 +16,10 @@ import Checkout from "../pages/user/Checkout";
 import BookingSuccess from "../pages/user/BookingSuccess";
 import MyBookings from "../pages/user/MyBookings";
 
-// import Wallet from "../pages/user/Wallet";
+import Wallet from "../pages/user/Wallet";
+import OwnerWallet from "../pages/owner/OwnerWallet";
+import AdminWallets from "../pages/admin/AdminWallets";
+
 
 // // owner
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
@@ -70,17 +73,6 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-
-      {/* <Route
-        path="/wallet"
-        element={
-          <ProtectedRoute roles={["user", "owner", "admin"]}>
-            <Wallet />
-          </ProtectedRoute>
-        }
-      /> */}
-
-      {/* Owner */}
       <Route
         path="/owner/dashboard"
         element={
@@ -148,6 +140,33 @@ const AppRoutes = () => {
       element={
         <ProtectedRoute roles={["admin"]}>
           <AdminParkings />
+        </ProtectedRoute>
+      }
+    />
+
+    <Route
+      path="/wallet"
+      element={
+        <ProtectedRoute>
+          <Wallet />
+        </ProtectedRoute>
+      }
+    />
+
+    <Route
+      path="/owner/wallet"
+      element={
+        <ProtectedRoute roles={["owner"]}>
+          <OwnerWallet />
+        </ProtectedRoute>
+      }
+    />
+
+    <Route
+      path="/admin/wallets"
+      element={
+        <ProtectedRoute roles={["admin"]}>
+          <AdminWallets />
         </ProtectedRoute>
       }
     />

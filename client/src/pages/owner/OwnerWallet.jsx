@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
-import { getMyWallet } from "../../api/wallet";
+import { getOwnerWallet } from "../../api/wallet";
 import WalletBalanceCard from "../../components/wallet/WalletBalanceCard";
 import WalletRow from "../../components/wallet/WalletRow";
 
-const Wallet = () => {
+const OwnerWallet = () => {
   const [wallet, setWallet] = useState(null);
 
   useEffect(() => {
-    const loadWallet = async () => {
-      const res = await getMyWallet();
+    const load = async () => {
+      const res = await getOwnerWallet();
       setWallet(res.data);
     };
-    loadWallet();
+    load();
   }, []);
 
   if (!wallet) return <p className="p-6">Loading wallet…</p>;
@@ -22,7 +22,7 @@ const Wallet = () => {
 
       <div className="bg-white rounded-xl shadow-sm p-4">
         <h2 className="font-semibold mb-3">
-          Transactions
+          Earnings Ledger
         </h2>
 
         <div className="grid grid-cols-4 text-xs text-gray-500 mb-2">
@@ -40,4 +40,4 @@ const Wallet = () => {
   );
 };
 
-export default Wallet;
+export default OwnerWallet;
