@@ -14,6 +14,8 @@ import Register from "../pages/auth/Register";
 // import Dashboard from "../pages/user/Dashboard";
 import Checkout from "../pages/user/Checkout";
 import BookingSuccess from "../pages/user/BookingSuccess";
+import MyBookings from "../pages/user/MyBookings";
+
 // import Wallet from "../pages/user/Wallet";
 
 // // owner
@@ -45,6 +47,15 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/my-bookings"
+        element={
+          <ProtectedRoute>
+            <MyBookings />
+          </ProtectedRoute>
+        }
+      />
+
 
       <Route
         path="/booking-success/:id"
