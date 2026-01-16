@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import BookingStatusBadge from "./BookingStatusBadge";
 import BookingCountdown from "./BookingCountdown";
-import { extendBooking, previewExtendCost } from "../../api/bookings";
+import { extendBooking, previewExtendCost } from "../../api/booking";
 
 const EXTEND_OPTIONS = [
   { label: "30 min", value: 30 },

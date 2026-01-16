@@ -19,8 +19,10 @@ import MyBookings from "../pages/user/MyBookings";
 // import Wallet from "../pages/user/Wallet";
 
 // // owner
-// import OwnerDashboard from "../pages/owner/OwnerDashboard";
-// import ManageParking from "../pages/owner/ManageParking";
+import OwnerDashboard from "../pages/owner/OwnerDashboard";
+import OwnerLots from "../pages/owner/OwnerLots";
+import OwnerLotDetails from "../pages/owner/OwnerLotDetails";
+import OwnerBookings from "../pages/owner/OwnerBookings";
 
 // // admin
 // import AdminDashboard from "../pages/admin/AdminDashboard";
@@ -67,14 +69,6 @@ const AppRoutes = () => {
       />
 
       {/* <Route
-        path="/bookings"
-        element={
-          <ProtectedRoute roles={["user", "owner", "admin"]}>
-            <MyBookings />
-          </ProtectedRoute>
-        }
-      /> */}
-      {/* <Route
         path="/wallet"
         element={
           <ProtectedRoute roles={["user", "owner", "admin"]}>
@@ -84,14 +78,40 @@ const AppRoutes = () => {
       /> */}
 
       {/* Owner */}
-      {/* <Route
-        path="/owner"
+      <Route
+        path="/owner/dashboard"
         element={
-          <ProtectedRoute roles={["owner", "admin"]}>
+          <ProtectedRoute roles={["owner"]}>
             <OwnerDashboard />
           </ProtectedRoute>
         }
-      /> */}
+      />
+      <Route
+        path="/owner/lots"
+        element={
+          <ProtectedRoute roles={["owner"]}>
+            <OwnerLots />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/owner/lots/:lotId"
+        element={
+          <ProtectedRoute roles={["owner"]}>
+            <OwnerLotDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/owner/bookings"
+        element={
+          <ProtectedRoute roles={["owner"]}>
+            <OwnerBookings />
+          </ProtectedRoute>
+        }
+      />
+
       {/* <Route
         path="/owner/parking"
         element={
