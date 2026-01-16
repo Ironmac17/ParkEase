@@ -26,8 +26,10 @@ import OwnerBookings from "../pages/owner/OwnerBookings";
 import OwnerRevenue from "../pages/owner/OwnerRevenue";
 
 // // admin
-// import AdminDashboard from "../pages/admin/AdminDashboard";
-// import FestivalManager from "../pages/admin/FestivalManager";
+import AdminDashboard from "../pages/admin/AdminDashboard";
+import AdminUsers from "../pages/admin/AdminUsers";
+import AdminParkings from "../pages/admin/AdminParkings";
+
 
 const AppRoutes = () => {
   return (
@@ -123,23 +125,33 @@ const AppRoutes = () => {
       />
 
 
-      {/* Admin */}
-      {/* <Route
-        path="/admin"
-        element={
-          <ProtectedRoute roles={["admin"]}>
-            <AdminDashboard />
-          </ProtectedRoute>
-        }
-      /> */}
-      {/* <Route
-        path="/admin/festivals"
-        element={
-          <ProtectedRoute roles={["admin"]}>
-            <FestivalManager />
-          </ProtectedRoute>
-        }
-      /> */}
+    <Route
+      path="/admin/dashboard"
+      element={
+        <ProtectedRoute roles={["admin"]}>
+          <AdminDashboard />
+        </ProtectedRoute>
+      }
+    />
+
+    <Route
+      path="/admin/users"
+      element={
+        <ProtectedRoute roles={["admin"]}>
+          <AdminUsers />
+        </ProtectedRoute>
+      }
+    />
+
+    <Route
+      path="/admin/parkings"
+      element={
+        <ProtectedRoute roles={["admin"]}>
+          <AdminParkings />
+        </ProtectedRoute>
+      }
+    />
+
     </Routes>
   );
 };
