@@ -4,7 +4,7 @@ import ProtectedRoute from "./ProtectedRoute";
 // public
 import Home from "../pages/public/Home";
 import Discover from "../pages/public/Discover";
-// import ParkingDetails from "../pages/public/ParkingDetails";
+import ParkingDetails from "../pages/public/ParkingDetails";
 
 // // auth
 import Login from "../pages/auth/Login";
@@ -28,7 +28,7 @@ const AppRoutes = () => {
     <Routes>
       {/* Public */}
       <Route path="/" element={<Home />} />
-      {/* <Route path="/parking/:id" element={<ParkingDetails />} /> */}
+      <Route path="/parking/:id" element={<ParkingDetails />} />
 
       {/* Auth */}
       <Route path="/login" element={<Login />} />
