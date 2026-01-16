@@ -23,6 +23,7 @@ import OwnerDashboard from "../pages/owner/OwnerDashboard";
 import OwnerLots from "../pages/owner/OwnerLots";
 import OwnerLotDetails from "../pages/owner/OwnerLotDetails";
 import OwnerBookings from "../pages/owner/OwnerBookings";
+import OwnerRevenue from "../pages/owner/OwnerRevenue";
 
 // // admin
 // import AdminDashboard from "../pages/admin/AdminDashboard";
@@ -112,14 +113,15 @@ const AppRoutes = () => {
         }
       />
 
-      {/* <Route
-        path="/owner/parking"
+      <Route
+        path="/owner/revenue"
         element={
-          <ProtectedRoute roles={["owner", "admin"]}>
-            <ManageParking />
+          <ProtectedRoute roles={["owner"]}>
+            <OwnerRevenue />
           </ProtectedRoute>
         }
-      /> */}
+      />
+
 
       {/* Admin */}
       {/* <Route

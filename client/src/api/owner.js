@@ -15,3 +15,7 @@ export const getOwnerLotDetails = (lotId) => {
 export const getOwnerBookings = (params) => {
   return api.get("/owner/bookings", { params });
 };
+
+export const getRevenueAnalytics = (params) => {
+  return api.get("/owner/analytics/revenue", { params });
+};
