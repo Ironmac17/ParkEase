@@ -24,11 +24,9 @@ export default function Login() {
 
     try {
       await login(form.email, form.password);
-      navigate("/discover");
+      navigate("/dashboard");
     } catch (err) {
-      setError(
-        err?.response?.data?.message || "Invalid email or password"
-      );
+      setError(err?.response?.data?.message || "Invalid email or password");
     } finally {
       setLoading(false);
     }
@@ -37,9 +35,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-[#0b0f1a] flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          Welcome back
-        </h1>
+        <h1 className="text-3xl font-bold text-white mb-2">Welcome back</h1>
         <p className="text-gray-400 mb-8">
           Login to continue booking parking effortlessly
         </p>
@@ -52,9 +48,7 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm text-gray-300 mb-1">
-              Email
-            </label>
+            <label className="block text-sm text-gray-300 mb-1">Email</label>
             <input
               type="email"
               name="email"
@@ -67,9 +61,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-300 mb-1">
-              Password
-            </label>
+            <label className="block text-sm text-gray-300 mb-1">Password</label>
             <input
               type="password"
               name="password"
@@ -92,10 +84,7 @@ export default function Login() {
 
         <div className="mt-6 text-center text-sm text-gray-400">
           Don’t have an account?{" "}
-          <Link
-            to="/register"
-            className="text-blue-400 hover:text-blue-300"
-          >
+          <Link to="/register" className="text-blue-400 hover:text-blue-300">
             Create one
           </Link>
         </div>

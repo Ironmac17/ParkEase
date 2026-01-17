@@ -14,13 +14,7 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false);
   const [estimatedAmount, setEstimatedAmount] = useState(0);
 
-  const {
-    spotId,
-    parkingLotId,
-    startTime,
-    endTime,
-    vehicleId,
-  } = state || {};
+  const { spotId, parkingLotId, startTime, endTime, vehicleId } = state || {};
 
   useEffect(() => {
     if (!state) {
@@ -33,19 +27,24 @@ export default function Checkout() {
 
   const fetchDetails = async () => {
     try {
-      const [lotRes, spotRes, priceRes] = await Promise.all([
+      const [lotRes, spotRes] = await Promise.all([
         axios.get(`/parking-lots/${parkingLotId}`),
-        axios.get(`/parking-spots/${spotId}`),
-        axios.post(`/pricing/calculate`, {
-          parkingLotId,
-          startTime,
-          endTime,
-        }),
+        axios.get(`/parking-lots/spot/${spotId}`),
       ]);
 
       setLot(lotRes.data);
       setSpot(spotRes.data);
-      setEstimatedAmount(priceRes.data.amount);
+
+      // Calculate amount based on duration and base rate
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      const hours = Math.ceil((end - start) / (1000 * 60 * 60));
+      const amount = hours * lotRes.data.baseRate;
+      setEstimatedAmount(amount);
+    } catch (err) {
+      console.error("Error fetching checkout details:", err);
+      alert("Failed to load parking details");
+      navigate(-1);
     } finally {
       setLoading(false);
     }
@@ -54,7 +53,7 @@ export default function Checkout() {
   const confirmBooking = async () => {
     setSubmitting(true);
     try {
-      await axios.post("/bookings", {
+      const res = await axios.post("/bookings", {
         spotId,
         vehicleId,
         startTime,
@@ -87,9 +86,7 @@ export default function Checkout() {
         <div className="bg-black/40 border border-white/10 rounded-xl p-6 space-y-2">
           <h2 className="text-lg font-semibold">{lot.name}</h2>
           <p className="text-gray-400">{lot.address}</p>
-          <p className="text-sm text-blue-400">
-            Spot: {spot.label}
-          </p>
+          <p className="text-sm text-blue-400">Spot: {spot.label}</p>
         </div>
 
         {/* Time */}
@@ -113,22 +110,16 @@ export default function Checkout() {
 
           <div className="flex justify-between text-lg font-semibold">
             <span>Total</span>
-            <span className="text-blue-400">
-              ₹{estimatedAmount.toFixed(2)}
-            </span>
+            <span className="text-blue-400">₹{estimatedAmount.toFixed(2)}</span>
           </div>
         </div>
 
         {/* Wallet */}
         <div className="bg-black/40 border border-white/10 rounded-xl p-6">
-          <p className="text-sm text-gray-400 mb-1">
-            Paying from wallet
-          </p>
+          <p className="text-sm text-gray-400 mb-1">Paying from wallet</p>
           <p>
             Balance:{" "}
-            <span className="text-green-400">
-              ₹{user.walletBalance}
-            </span>
+            <span className="text-green-400">₹{user.walletBalance}</span>
           </p>
         </div>
 

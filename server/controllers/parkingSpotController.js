@@ -197,10 +197,22 @@ const getParkingSpots = async (req, res) => {
   res.json(spots);
 };
 
+const getSpotById = async (req, res) => {
+  const { spotId } = req.params;
+
+  const spot = await ParkingSpot.findById(spotId);
+  if (!spot) {
+    return res.status(404).json({ message: "Spot not found" });
+  }
+
+  res.json(spot);
+};
+
 module.exports = {
   addSpot,
   batchCreateSpots,
   deleteSpot,
   toggleSpotStatus,
   getParkingSpots,
+  getSpotById,
 };

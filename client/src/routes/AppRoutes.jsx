@@ -11,6 +11,7 @@ import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 
 // // user
+import Dashboard from "../pages/user/Dashboard";
 import Checkout from "../pages/user/Checkout";
 import BookingSuccess from "../pages/user/BookingSuccess";
 import MyBookings from "../pages/user/MyBookings";
@@ -18,7 +19,6 @@ import MyBookings from "../pages/user/MyBookings";
 import Wallet from "../pages/user/Wallet";
 import OwnerWallet from "../pages/owner/OwnerWallet";
 import AdminWallets from "../pages/admin/AdminWallets";
-
 
 // // owner
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
@@ -32,7 +32,6 @@ import AdminDashboard from "../pages/admin/AdminDashboard";
 import AdminUsers from "../pages/admin/AdminUsers";
 import AdminParkings from "../pages/admin/AdminParkings";
 
-
 const AppRoutes = () => {
   return (
     <Routes>
@@ -43,7 +42,19 @@ const AppRoutes = () => {
       {/* Auth */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+
+      {/* Public Discover */}
       <Route path="/discover" element={<Discover />} />
+
+      {/* User Dashboard */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
 
       {/* User */}
       <Route
@@ -62,7 +73,6 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-
 
       <Route
         path="/booking-success/:id"
@@ -115,61 +125,59 @@ const AppRoutes = () => {
         }
       />
 
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
 
-    <Route
-      path="/admin/dashboard"
-      element={
-        <ProtectedRoute roles={["admin"]}>
-          <AdminDashboard />
-        </ProtectedRoute>
-      }
-    />
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <AdminUsers />
+          </ProtectedRoute>
+        }
+      />
 
-    <Route
-      path="/admin/users"
-      element={
-        <ProtectedRoute roles={["admin"]}>
-          <AdminUsers />
-        </ProtectedRoute>
-      }
-    />
+      <Route
+        path="/admin/parkings"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <AdminParkings />
+          </ProtectedRoute>
+        }
+      />
 
-    <Route
-      path="/admin/parkings"
-      element={
-        <ProtectedRoute roles={["admin"]}>
-          <AdminParkings />
-        </ProtectedRoute>
-      }
-    />
+      <Route
+        path="/wallet"
+        element={
+          <ProtectedRoute>
+            <Wallet />
+          </ProtectedRoute>
+        }
+      />
 
-    <Route
-      path="/wallet"
-      element={
-        <ProtectedRoute>
-          <Wallet />
-        </ProtectedRoute>
-      }
-    />
+      <Route
+        path="/owner/wallet"
+        element={
+          <ProtectedRoute roles={["owner"]}>
+            <OwnerWallet />
+          </ProtectedRoute>
+        }
+      />
 
-    <Route
-      path="/owner/wallet"
-      element={
-        <ProtectedRoute roles={["owner"]}>
-          <OwnerWallet />
-        </ProtectedRoute>
-      }
-    />
-
-    <Route
-      path="/admin/wallets"
-      element={
-        <ProtectedRoute roles={["admin"]}>
-          <AdminWallets />
-        </ProtectedRoute>
-      }
-    />
-
+      <Route
+        path="/admin/wallets"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <AdminWallets />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 };

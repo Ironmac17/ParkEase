@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Navbar from "../../components/discover/Navbar";
 import SearchBar from "../../components/discover/SearchBar";
 import Filters from "../../components/discover/Filters";
 import ParkingMap from "../../components/discover/ParkingMap";
@@ -9,20 +8,13 @@ import useParkingSearch from "../../hooks/useParkingSearch";
 
 export default function Discover() {
   const [view, setView] = useState("map");
-  const [mapCenter, setMapCenter] = useState([20.5937, 78.9629]);
+  const [mapCenter, setMapCenter] = useState([28.7041, 77.1025]); // Delhi
   const [radiusKm, setRadiusKm] = useState(5);
-  const {
-    parkingLots,
-    filters,
-    setFilters,
-    search,
-    setSearch,
-    loading,
-  } = useParkingSearch();
+  const { parkingLots, filters, setFilters, search, setSearch, loading } =
+    useParkingSearch();
 
   return (
-    <div className="min-h-screen bg-[#0b0f1a] text-white">
-      <Navbar />
+    <div className="min-h-screen bg-[#0b0f1a]">
       <SearchBar
         search={search}
         setSearch={setSearch}
@@ -30,16 +22,22 @@ export default function Discover() {
         radiusKm={radiusKm}
       />
 
-      <div className="px-6 py-4 flex items-center justify-between">
+      <div className="px-6 py-4 flex items-center justify-between bg-black/40 backdrop-blur">
         <Filters filters={filters} setFilters={setFilters} />
         <ViewToggle view={view} setView={setView} />
       </div>
 
-      <div className="h-[calc(100vh-220px)]">
+      <div className="px-6 py-4" style={{ height: "calc(100vh - 280px)" }}>
         {view === "map" ? (
-          <ParkingMap parkingLots={parkingLots} loading={loading}  center={mapCenter}/>
+          <ParkingMap
+            parkingLots={parkingLots}
+            loading={loading}
+            center={mapCenter}
+          />
         ) : (
-          <ParkingList parkingLots={parkingLots} loading={loading} />
+          <div className="h-full flex gap-4">
+            <ParkingList parkingLots={parkingLots} loading={loading} />
+          </div>
         )}
       </div>
     </div>

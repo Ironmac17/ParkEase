@@ -5,8 +5,14 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem("parkease_user");
-    return stored ? JSON.parse(stored) : null;
+    try {
+      const stored = localStorage.getItem("parkease_user");
+      return stored && stored !== "undefined" ? JSON.parse(stored) : null;
+    } catch (err) {
+      localStorage.removeItem("parkease_user");
+      localStorage.removeItem("parkease_token");
+      return null;
+    }
   });
 
   const [loading, setLoading] = useState(true);
@@ -40,26 +46,28 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
 
-    const { token, user } = res.data;
+    const { token, _id, username, email: userEmail, role } = res.data;
+    const userData = { _id, username, email: userEmail, role };
 
     localStorage.setItem("parkease_token", token);
-    localStorage.setItem("parkease_user", JSON.stringify(user));
-    setUser(user);
+    localStorage.setItem("parkease_user", JSON.stringify(userData));
+    setUser(userData);
 
-    return user;
+    return userData;
   };
 
   // Register
   const register = async (data) => {
     const res = await api.post("/auth/register", data);
 
-    const { token, user } = res.data;
+    const { token, _id, username, email: userEmail, role } = res.data;
+    const userData = { _id, username, email: userEmail, role };
 
     localStorage.setItem("parkease_token", token);
-    localStorage.setItem("parkease_user", JSON.stringify(user));
-    setUser(user);
+    localStorage.setItem("parkease_user", JSON.stringify(userData));
+    setUser(userData);
 
-    return user;
+    return userData;
   };
 
   // Logout

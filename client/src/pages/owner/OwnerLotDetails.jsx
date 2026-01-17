@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getOwnerLotDetails } from "../../api/owner";
-import socket from "../../hooks/useSocket";
+import { useSocket } from "../../hooks/useSocket";
 import SpotStatusBadge from "./SpotStatusBadge";
 import LotBookingRow from "./LotBookingRow";
 
 const OwnerLotDetails = () => {
   const { lotId } = useParams();
+  const socket = useSocket();
   const [lot, setLot] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,11 +27,11 @@ const OwnerLotDetails = () => {
   }, [lotId]);
 
   useEffect(() => {
-    socket.emit("join", `parking_lot_${lotId}`);
-    socket.on("booking:updated", fetchLot);
+    socket?.emit("join", `parking_lot_${lotId}`);
+    socket?.on("booking:updated", fetchLot);
 
     return () => {
-      socket.off("booking:updated", fetchLot);
+      socket?.off("booking:updated", fetchLot);
     };
   }, [lotId]);
 
@@ -51,14 +52,9 @@ const OwnerLotDetails = () => {
 
       {/* Spots grid */}
       <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
-        {lot.spots.map(spot => (
-          <div
-            key={spot._id}
-            className="border rounded-lg p-2 text-center"
-          >
-            <p className="text-sm font-medium">
-              #{spot.number}
-            </p>
+        {lot.spots.map((spot) => (
+          <div key={spot._id} className="border rounded-lg p-2 text-center">
+            <p className="text-sm font-medium">#{spot.number}</p>
             <SpotStatusBadge status={spot.status} />
           </div>
         ))}
@@ -66,16 +62,12 @@ const OwnerLotDetails = () => {
 
       {/* Active bookings */}
       <div className="bg-white rounded-xl shadow-sm p-4">
-        <h3 className="font-semibold mb-3">
-          Active Bookings
-        </h3>
+        <h3 className="font-semibold mb-3">Active Bookings</h3>
 
         {lot.activeBookings.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            No active bookings
-          </p>
+          <p className="text-sm text-gray-500">No active bookings</p>
         ) : (
-          lot.activeBookings.map(b => (
+          lot.activeBookings.map((b) => (
             <LotBookingRow key={b._id} booking={b} />
           ))
         )}

@@ -27,11 +27,9 @@ export default function Register() {
 
     try {
       await register(form);
-      navigate("/login");
+      navigate("/dashboard");
     } catch (err) {
-      setError(
-        err?.response?.data?.message || "Registration failed"
-      );
+      setError(err?.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -43,9 +41,7 @@ export default function Register() {
         <h1 className="text-3xl font-bold text-white mb-2">
           Create your account
         </h1>
-        <p className="text-gray-400 mb-8">
-          Start booking parking in seconds
-        </p>
+        <p className="text-gray-400 mb-8">Start booking parking in seconds</p>
 
         {error && (
           <div className="mb-4 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">
@@ -55,9 +51,7 @@ export default function Register() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm text-gray-300 mb-1">
-              Username
-            </label>
+            <label className="block text-sm text-gray-300 mb-1">Username</label>
             <input
               type="text"
               name="username"
@@ -70,9 +64,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-300 mb-1">
-              Email
-            </label>
+            <label className="block text-sm text-gray-300 mb-1">Email</label>
             <input
               type="email"
               name="email"
@@ -85,9 +77,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-300 mb-1">
-              Password
-            </label>
+            <label className="block text-sm text-gray-300 mb-1">Password</label>
             <input
               type="password"
               name="password"
@@ -146,10 +136,7 @@ export default function Register() {
 
         <div className="mt-6 text-center text-sm text-gray-400">
           Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-blue-400 hover:text-blue-300"
-          >
+          <Link to="/login" className="text-blue-400 hover:text-blue-300">
             Login
           </Link>
         </div>

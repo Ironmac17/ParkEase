@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { getOwnerDashboard } from "../../api/owner";
 import { useAuth } from "../../context/AuthContext";
-import socket from "../../hooks/useSocket";
+import { useSocket } from "../../hooks/useSocket";
 import StatCard from "../../components/owner/StateCard";
 import ActiveBookingRow from "../../components/owner/ActiveBookingRow";
 
 const OwnerDashboard = () => {
   const { user } = useAuth();
+  const socket = useSocket();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +27,7 @@ const OwnerDashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !socket) return;
 
     socket.emit("join", `owner_${user._id}`);
     socket.on("booking:updated", fetchDashboard);
@@ -34,7 +35,7 @@ const OwnerDashboard = () => {
     return () => {
       socket.off("booking:updated", fetchDashboard);
     };
-  }, [user]);
+  }, [user, socket]);
 
   if (loading) {
     return <p className="p-6">Loading dashboard…</p>;
@@ -44,13 +45,8 @@ const OwnerDashboard = () => {
     return <p className="p-6">Unable to load dashboard</p>;
   }
 
-  const {
-    totalLots,
-    totalSpots,
-    occupiedSpots,
-    todayRevenue,
-    activeBookings
-  } = data;
+  const { totalLots, totalSpots, occupiedSpots, todayRevenue, activeBookings } =
+    data;
 
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-6">
@@ -64,20 +60,13 @@ const OwnerDashboard = () => {
 
       {/* Active bookings */}
       <div className="bg-white rounded-xl shadow-sm p-4">
-        <h2 className="font-semibold mb-3">
-          Active Bookings
-        </h2>
+        <h2 className="font-semibold mb-3">Active Bookings</h2>
 
         {activeBookings.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            No active bookings right now
-          </p>
+          <p className="text-sm text-gray-500">No active bookings right now</p>
         ) : (
-          activeBookings.map(b => (
-            <ActiveBookingRow
-              key={b._id}
-              booking={b}
-            />
+          activeBookings.map((b) => (
+            <ActiveBookingRow key={b._id} booking={b} />
           ))
         )}
       </div>
