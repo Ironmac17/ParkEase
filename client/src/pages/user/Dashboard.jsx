@@ -172,7 +172,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b0f1a] via-[#1a1f2e] to-[#0b0f1a] pt-8 px-6">
+    <div className="min-h-screen bg-gradient-to-br from-[#0b0f1a] via-[#1a1f2e] to-[#0b0f1a] pt-8 px-6 pb-10">
       <div className="max-w-7xl mx-auto">
         {/* Welcome Header */}
         <div className="mb-10">
@@ -189,13 +189,7 @@ export default function Dashboard() {
                 })}
               </p>
             </div>
-            <button
-              onClick={logout}
-              className="flex items-center gap-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 hover:text-red-300 px-5 py-2 rounded-lg transition-all duration-300 font-semibold"
-            >
-              <LogOut size={18} />
-              <span>Logout</span>
-            </button>
+            
           </div>
         </div>
 
@@ -424,29 +418,6 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-
-        {/* Account Info */}
-        <div className="mt-12 border-t border-white/10 pt-8">
-          <h3 className="text-lg font-bold text-white mb-4">Account Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-              <p className="text-gray-400 text-sm mb-1">Username</p>
-              <p className="text-white text-lg font-semibold">{user?.username}</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-              <p className="text-gray-400 text-sm mb-1">Email</p>
-              <p className="text-white text-lg font-semibold break-all">{user?.email}</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-              <p className="text-gray-400 text-sm mb-1">Account Type</p>
-              <p className="text-white text-lg font-semibold capitalize">
-                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  {user?.role}
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

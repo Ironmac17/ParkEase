@@ -61,4 +61,61 @@ const getMe = async (req, res) => {
   res.json(req.user);
 };
 
-module.exports = { register, login, getMe };
+const updateSettings = async (req, res) => {
+  try {
+    const { emailNotifications, pushNotifications, bookingReminders, promotionalEmails, weeklyReport } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        settings: {
+          emailNotifications,
+          pushNotifications,
+          bookingReminders,
+          promotionalEmails,
+          weeklyReport,
+        },
+      },
+      { new: true }
+    );
+
+    res.json({
+      message: "Settings updated successfully",
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating settings" });
+  }
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const { name, phone, address } = req.body;
+
+    const updateData = {
+      name: name || req.user.name,
+      phone: phone || req.user.phone,
+      address: address || req.user.address,
+    };
+
+    // If file is uploaded, add profile image
+    if (req.file) {
+      updateData.profileImage = req.file.path;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      updateData,
+      { new: true }
+    );
+
+    res.json({
+      message: "Profile updated successfully",
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating profile" });
+  }
+};
+
+module.exports = { register, login, getMe, updateSettings, updateProfile };

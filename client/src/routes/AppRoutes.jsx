@@ -15,6 +15,8 @@ import Dashboard from "../pages/user/Dashboard";
 import Checkout from "../pages/user/Checkout";
 import BookingSuccess from "../pages/user/BookingSuccess";
 import MyBookings from "../pages/user/MyBookings";
+import GeneralSettings from "../pages/user/settings/GeneralSettings";
+import ProfileSettings from "../pages/user/settings/ProfileSettings";
 
 import Wallet from "../pages/user/Wallet";
 import OwnerWallet from "../pages/owner/OwnerWallet";
@@ -74,6 +76,24 @@ const AppRoutes = () => {
         }
       />
 
+      {/* Settings Routes */}
+      <Route
+        path="/settings/general"
+        element={
+          <ProtectedRoute>
+            <GeneralSettings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings/profile"
+        element={
+          <ProtectedRoute>
+            <ProfileSettings />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/booking-success/:id"
         element={
@@ -98,7 +118,6 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-
       <Route
         path="/owner/lots/:lotId"
         element={

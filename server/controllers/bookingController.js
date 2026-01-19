@@ -94,12 +94,21 @@ const createBooking = async (req, res) => {
     status: "confirmed",
   });
 
-  // 7️⃣ Generate QR code for booking
+  // 7️⃣ Generate QR code for booking with all data
   const qrCode = await generateBookingQR({
     bookingId: booking._id,
     userId: booking.user,
-    spotId: booking.parkingSpot,
-    validTill: booking.endTime,
+    spotId: booking.parkingSpot._id,
+    lotId: parkingLot._id,
+    lotName: parkingLot.name,
+    spotLabel: heldSpot.label,
+    vehicleRegistration: vehicle.registrationNumber,
+    vehicleModel: vehicle.model,
+    startTime: start.toISOString(),
+    endTime: end.toISOString(),
+    amountPaid: bookingAmount,
+    userName: req.user.username,
+    userPhone: req.user.phone,
   });
 
   booking.qrCode = qrCode;

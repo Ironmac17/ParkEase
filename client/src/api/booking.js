@@ -1,16 +1,37 @@
 import api from "./axios";
 
 export const getMyBookings = () => {
-  return api.get("/bookings/my");
+  return api.get("/bookings");
 };
 
-export const extendBooking = (bookingId, extraMinutes) => {
+export const getBookingById = (bookingId) => {
+  return api.get(`/bookings/${bookingId}`);
+};
+
+export const createBooking = (bookingData) => {
+  return api.post("/bookings", bookingData);
+};
+
+export const extendBooking = (bookingId, newEndTime) => {
   return api.post(`/bookings/${bookingId}/extend`, {
-    extraMinutes
+    newEndTime,
   });
 };
+
+export const cancelBooking = (bookingId) => {
+  return api.post(`/bookings/${bookingId}/cancel`);
+};
+
+export const checkInBooking = (bookingId) => {
+  return api.post(`/bookings/${bookingId}/check-in`);
+};
+
+export const checkOutBooking = (bookingId) => {
+  return api.post(`/bookings/${bookingId}/check-out`);
+};
+
 export const previewExtendCost = (bookingId, extraMinutes) => {
   return api.post(`/bookings/${bookingId}/extend/preview`, {
-    extraMinutes
+    extraMinutes,
   });
 };
