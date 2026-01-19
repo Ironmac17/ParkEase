@@ -9,6 +9,7 @@ export default function useParkingSearch() {
     covered: false,
     ev: false,
     security: false,
+    maxPrice: 500,
   });
 
   useEffect(() => {
@@ -26,10 +27,20 @@ export default function useParkingSearch() {
   };
 
   const applyFilters = async () => {
-    const res = await axios.get("/parking-lots", {
-      params: { search, ...filters },
-    });
-    setParkingLots(res.data);
+    try {
+      const res = await axios.get("/parking-lots", {
+        params: {
+          search,
+          covered: filters.covered,
+          ev: filters.ev,
+          security: filters.security,
+          maxPrice: filters.maxPrice,
+        },
+      });
+      setParkingLots(res.data);
+    } catch (err) {
+      console.error("Filter error:", err);
+    }
   };
 
   return {

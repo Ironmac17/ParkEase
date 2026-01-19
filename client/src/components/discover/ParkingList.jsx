@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { MapPin, Zap, Shield, Video } from "lucide-react";
+import { MapPin, Zap, Shield, Video, ChevronRight } from "lucide-react";
 
 export default function ParkingList({ parkingLots = [] }) {
   const navigate = useNavigate();
@@ -13,107 +13,139 @@ export default function ParkingList({ parkingLots = [] }) {
 
   if (!parkingLots.length) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-        No parking lots found for this area
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center p-8">
+          <div className="text-6xl mb-4">🔍</div>
+          <h3 className="text-xl font-semibold text-white mb-2">
+            No Parking Found
+          </h3>
+          <p className="text-gray-400 text-sm">
+            Try adjusting your filters, search location, or price range
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="overflow-y-auto h-full border-r border-white/10">
-      {parkingLots.map((lot) => {
-        const free = lot?.stats?.freeSpots ?? 0;
-        const total = lot?.stats?.totalSpots ?? 0;
-        const isAvailable = free > 0;
-        const occupancyPercent =
-          total > 0 ? Math.round((free / total) * 100) : 0;
+    <div className="overflow-y-auto h-full w-full bg-[#0b0f1a]">
+      <div className="p-6 space-y-4">
+        {parkingLots.map((lot) => {
+          const free = lot?.stats?.freeSpots ?? 0;
+          const total = lot?.stats?.totalSpots ?? 0;
+          const isAvailable = free > 0;
+          const occupancyPercent =
+            total > 0 ? Math.round((free / total) * 100) : 0;
 
-        const amenities = [];
-        if (lot.amenities?.covered)
-          amenities.push({ icon: "🏠", label: "Covered" });
-        if (lot.amenities?.ev) amenities.push({ icon: "⚡", label: "EV" });
-        if (lot.amenities?.security)
-          amenities.push({ icon: "🔒", label: "24/7" });
-        if (lot.amenities?.cctv) amenities.push({ icon: "📹", label: "CCTV" });
+          const amenities = [];
+          if (lot.amenities?.covered) amenities.push("🏠");
+          if (lot.amenities?.ev) amenities.push("⚡");
+          if (lot.amenities?.security) amenities.push("🔒");
+          if (lot.amenities?.cctv) amenities.push("📹");
 
-        return (
-          <div
-            key={lot._id}
-            className="p-5 border-b border-white/10 hover:bg-white/5 transition cursor-pointer"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white">{lot.name}</h3>
-                <div className="flex items-center gap-1 text-gray-400 text-sm mt-1">
-                  <MapPin size={14} />
-                  {lot.address}
+          return (
+            <div
+              key={lot._id}
+              onClick={() => handleClick(lot._id)}
+              className="bg-gradient-to-r from-white/8 to-white/4 border border-white/15 rounded-xl p-5 hover:from-white/12 hover:to-white/8 hover:border-blue-500/50 transition cursor-pointer shadow-lg"
+            >
+              <div className="grid grid-cols-2 lg:grid-cols-12 gap-4 items-center">
+                {/* Name and Address */}
+                <div className="lg:col-span-3">
+                  <h3 className="text-white font-bold text-lg">{lot.name}</h3>
+                  <p className="text-gray-400 text-xs flex items-center gap-1 mt-2">
+                    <MapPin size={14} />
+                    {lot.address}
+                  </p>
+                </div>
+
+                {/* Price */}
+                <div className="lg:col-span-1 text-center lg:text-left">
+                  <p className="text-blue-400 font-bold text-2xl">
+                    ₹{lot.baseRate}
+                  </p>
+                  <p className="text-gray-500 text-xs">/hr</p>
+                </div>
+
+                {/* Availability */}
+                <div className="lg:col-span-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-green-500/30 to-green-600/30 border border-green-500/50 flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-green-400 font-bold text-sm">
+                          {free}/{total}
+                        </p>
+                        <p className="text-green-400 text-xs font-semibold">
+                          free
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-white font-bold text-lg">
+                        {occupancyPercent}%
+                      </p>
+                      <p
+                        className={`text-xs font-semibold ${
+                          occupancyPercent >= 70
+                            ? "text-red-400"
+                            : occupancyPercent >= 40
+                              ? "text-yellow-400"
+                              : "text-green-400"
+                        }`}
+                      >
+                        {occupancyPercent >= 70
+                          ? "Nearly Full"
+                          : occupancyPercent >= 40
+                            ? "Moderate"
+                            : "Available"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Amenities */}
+                <div className="lg:col-span-2">
+                  {amenities.length > 0 ? (
+                    <div className="flex gap-3">
+                      {amenities.map((emoji, idx) => (
+                        <span key={idx} className="text-2xl" title={emoji}>
+                          {emoji}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm">No amenities</p>
+                  )}
+                </div>
+
+                {/* Distance/Rating */}
+                <div className="lg:col-span-2 text-center lg:text-left">
+                  <p className="text-white font-semibold text-sm">
+                    Premium Parking
+                  </p>
+                  <p className="text-gray-400 text-xs">24/7 Availability</p>
+                </div>
+
+                {/* Button */}
+                <div className="col-span-2 lg:col-span-2">
+                  <button
+                    onClick={() => handleClick(lot._id)}
+                    disabled={!isAvailable}
+                    className={`w-full py-3 px-4 rounded-lg font-bold text-sm transition flex items-center justify-center gap-2 ${
+                      isAvailable
+                        ? "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg"
+                        : "bg-gray-700/50 text-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    {isAvailable ? "Book Now" : "Full"}
+                    {isAvailable && <ChevronRight size={18} />}
+                  </button>
                 </div>
               </div>
-              <span className="text-lg font-bold text-blue-400 whitespace-nowrap ml-2">
-                ₹{lot.baseRate}/hr
-              </span>
             </div>
-
-            {/* Availability Bar */}
-            <div className="mb-3">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-gray-400">
-                  {free} / {total} spots available
-                </span>
-                <span
-                  className={`text-xs font-semibold ${
-                    occupancyPercent >= 70
-                      ? "text-red-400"
-                      : occupancyPercent >= 40
-                      ? "text-yellow-400"
-                      : "text-green-400"
-                  }`}
-                >
-                  {occupancyPercent}% free
-                </span>
-              </div>
-              <div className="w-full bg-black/40 rounded-full h-2 overflow-hidden border border-white/10">
-                <div
-                  className={`h-full transition-all ${
-                    occupancyPercent >= 70
-                      ? "bg-red-500"
-                      : occupancyPercent >= 40
-                      ? "bg-yellow-500"
-                      : "bg-green-500"
-                  }`}
-                  style={{ width: `${occupancyPercent}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Amenities */}
-            {amenities.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {amenities.map((am) => (
-                  <span
-                    key={am.label}
-                    className="text-xs bg-white/10 border border-white/10 text-gray-300 px-2 py-1 rounded"
-                  >
-                    {am.icon} {am.label}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <button
-              onClick={() => handleClick(lot._id)}
-              disabled={!isAvailable}
-              className={`w-full py-2 rounded-lg font-semibold transition text-sm ${
-                isAvailable
-                  ? "bg-blue-500 hover:bg-blue-600 text-white"
-                  : "bg-gray-600/40 text-gray-400 cursor-not-allowed"
-              }`}
-            >
-              {isAvailable ? "View & Book" : "No Spots Available"}
-            </button>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

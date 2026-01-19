@@ -154,8 +154,27 @@ export default function BookingSuccess() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-400">
-        Loading booking details…
+      <div className="min-h-screen bg-[#0b0f1a] flex items-center justify-center text-gray-400">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p>Loading booking details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <div className="min-h-screen bg-[#0b0f1a] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl text-gray-400 mb-4">Booking not found</p>
+          <button
+            onClick={() => navigate("/my-bookings")}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+          >
+            View My Bookings
+          </button>
+        </div>
       </div>
     );
   }
@@ -164,143 +183,178 @@ export default function BookingSuccess() {
   const totalAmount = booking.amountPaid + (booking.extraAmountPaid || 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex items-center justify-center px-4 py-8">
-      <div className="max-w-2xl w-full space-y-6">
-        {/* Success Card */}
-        <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 border-2 border-green-500/50 rounded-2xl p-8">
-          <div className="text-center space-y-4">
-            <div className="text-6xl animate-bounce">✓</div>
-            <h1 className="text-3xl font-bold">Booking Confirmed!</h1>
-            <p className="text-gray-300">Your parking spot is reserved</p>
-          </div>
+    <div className="min-h-screen bg-[#0b0f1a] text-white px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => navigate("/my-bookings")}
+            className="text-gray-400 hover:text-white mb-4 flex items-center gap-2"
+          >
+            ← Back to My Bookings
+          </button>
+          <h1 className="text-4xl font-bold">Booking Confirmed ✓</h1>
+          <p className="text-gray-400 mt-2">Your parking space is reserved</p>
         </div>
 
-        {/* QR Code Section */}
-        <div className="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-8 text-center space-y-4">
-          <h2 className="text-lg font-semibold text-gray-200">
-            Show This QR Code at Entry
-          </h2>
-          <div id="booking-qr" className="bg-white p-6 rounded-xl inline-block">
-            <QRCodeCanvas
-              value={JSON.stringify({
-                bookingId: booking._id,
-                lot: booking.parkingLot.name,
-                spot: booking.parkingSpot.label,
-                startTime: booking.startTime,
-                endTime: booking.endTime,
-              })}
-              size={220}
-              level="H"
-              includeMargin={true}
-            />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Section */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Success Status */}
+            <div className="bg-green-600/20 border border-green-500/30 rounded-2xl p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center text-2xl">
+                  ✓
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-green-300">
+                    Booking Success!
+                  </h2>
+                  <p className="text-gray-300">Booking ID: {booking._id}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Parking Location */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="font-semibold text-lg mb-4">Parking Location</h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Parking Lot</p>
+                  <p className="text-lg font-semibold">
+                    {booking.parkingLot?.name}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Address</p>
+                  <p className="text-gray-300">{booking.parkingLot?.address}</p>
+                </div>
+                <div className="bg-purple-500/20 border border-purple-500/30 rounded-lg p-3">
+                  <p className="text-gray-400 text-sm mb-1">Spot Number</p>
+                  <p className="text-2xl font-bold text-purple-300">
+                    {booking.parkingSpot?.label}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Booking Details */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="font-semibold text-lg mb-4">Booking Details</h3>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-gray-400 text-sm mb-1">Check-In</p>
+                    <p className="font-semibold">
+                      {new Date(booking.startTime).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm mb-1">Check-Out</p>
+                    <p className="font-semibold">
+                      {new Date(booking.endTime).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-orange-500/20 border border-orange-500/30 rounded-lg p-3">
+                  <p className="text-gray-400 text-sm mb-1">Duration</p>
+                  <p className="text-2xl font-bold text-orange-300">
+                    {duration}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Vehicle */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h3 className="font-semibold text-lg mb-4">Vehicle</h3>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-gray-400 text-sm mb-1">Registration</p>
+                    <p className="font-semibold">
+                      {booking.vehicle?.registrationNumber}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm mb-1">Model</p>
+                    <p className="font-semibold">{booking.vehicle?.model}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-gray-400">Booking ID: {booking._id}</p>
-        </div>
 
-        {/* Booking Details Grid */}
-        <div className="grid md:grid-cols-2 gap-4">
-          {/* Left Column */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
-            <h3 className="font-semibold text-gray-200 mb-4">
-              Parking Details
-            </h3>
-
-            <div className="flex items-start gap-3">
-              <MapPin className="w-5 h-5 text-blue-400 flex-shrink-0 mt-1" />
-              <div>
-                <p className="text-sm text-gray-400">Location</p>
-                <p className="font-semibold">{booking.parkingLot.name}</p>
-                <p className="text-sm text-gray-300">
-                  Spot {booking.parkingSpot.label}
-                </p>
+          {/* Right Section - QR and Amount */}
+          <div className="space-y-6">
+            {/* QR Code */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center">
+              <h3 className="font-semibold mb-4">Show at Entry</h3>
+              <div
+                id="booking-qr"
+                className="flex justify-center mb-4 bg-white p-4 rounded-lg"
+              >
+                <QRCodeCanvas value={booking._id} size={200} />
               </div>
+              <p className="text-sm text-gray-400">
+                Scan this QR at parking entry
+              </p>
             </div>
 
-            <div className="flex items-start gap-3">
-              <Car className="w-5 h-5 text-purple-400 flex-shrink-0 mt-1" />
-              <div>
-                <p className="text-sm text-gray-400">Vehicle</p>
-                <p className="font-semibold">
-                  {booking.vehicle.registrationNumber}
-                </p>
-                <p className="text-sm text-gray-300">{booking.vehicle.model}</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-green-400 flex-shrink-0 mt-1" />
-              <div>
-                <p className="text-sm text-gray-400">Duration</p>
-                <p className="font-semibold">{duration}</p>
-                <p className="text-sm text-gray-300">
-                  {new Date(booking.startTime).toLocaleTimeString()} -{" "}
-                  {new Date(booking.endTime).toLocaleTimeString()}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Pricing */}
-          <div className="bg-gradient-to-br from-blue-600/20 to-cyan-600/20 border border-blue-500/30 rounded-xl p-6">
-            <h3 className="font-semibold text-gray-200 mb-4">Price Details</h3>
-
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-300">Parking Charge</span>
-                <span className="font-semibold">
-                  ₹{booking.amountPaid.toFixed(2)}
-                </span>
-              </div>
-
-              {booking.extraAmountPaid > 0 && (
-                <div className="flex justify-between items-center text-orange-400">
-                  <span>Overtime Charge</span>
+            {/* Amount */}
+            <div className="bg-green-600/20 border border-green-500/30 rounded-2xl p-6">
+              <h3 className="font-semibold mb-4">Amount Paid</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Parking Charge</span>
                   <span className="font-semibold">
-                    ₹{booking.extraAmountPaid.toFixed(2)}
+                    ₹{booking.amountPaid?.toFixed(2)}
                   </span>
                 </div>
-              )}
-
-              <div className="border-t border-white/10 pt-3 flex justify-between items-center">
-                <span className="text-lg font-semibold">Total Amount</span>
-                <span className="text-2xl font-bold text-green-400">
-                  ₹{totalAmount.toFixed(2)}
-                </span>
-              </div>
-
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mt-4 flex gap-2">
-                <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-                <p className="text-sm text-yellow-300">
-                  Arriving late? Extended parking available at hourly rate.
-                </p>
+                {booking.extraAmountPaid > 0 && (
+                  <div className="flex justify-between text-orange-300">
+                    <span>Overtime Charge</span>
+                    <span className="font-semibold">
+                      ₹{booking.extraAmountPaid?.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="border-t border-white/10 pt-3">
+                  <div className="flex justify-between">
+                    <span className="text-lg font-semibold">Total</span>
+                    <span className="text-3xl font-bold text-green-300">
+                      ₹{totalAmount.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
+
+            {/* Download Receipt */}
+            <button
+              onClick={downloadReceipt}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition"
+            >
+              <Download size={20} />
+              Download Receipt
+            </button>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigate("/my-bookings")}
+                className="flex-1 border border-white/20 hover:border-white/40 hover:bg-white/5 text-white py-3 rounded-xl font-semibold transition"
+              >
+                My Bookings
+              </button>
+              <button
+                onClick={() => navigate("/discover")}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition"
+              >
+                Book Again
+              </button>
+            </div>
           </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={downloadReceipt}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition transform hover:scale-105"
-          >
-            <Download size={18} />
-            Download Receipt
-          </button>
-
-          <button
-            onClick={() => navigate("/bookings")}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 py-3 rounded-xl font-semibold transition transform hover:scale-105"
-          >
-            View My Bookings
-          </button>
-
-          <button
-            onClick={() => navigate("/")}
-            className="flex-1 border border-white/20 hover:border-white/40 hover:bg-white/5 py-3 rounded-xl font-semibold transition"
-          >
-            Back to Home
-          </button>
         </div>
       </div>
     </div>
