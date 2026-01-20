@@ -1,65 +1,139 @@
 const User = require("../models/User");
+const Wallet = require("../models/Wallet");
 const generateJWT = require("../utils/generateJWT");
 
 const register = async (req, res) => {
-  const { username, email, password, role } = req.body;
+  try {
+    const { username, email, password, role } = req.body;
 
-  if (!username || !email || !password) {
-    return res.status(400).json({ message: "All fields required" });
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    const user = await User.create({
+      username,
+      email,
+      password,
+      role: role === "owner" ? "owner" : "user",
+      status: role === "owner" ? "pending" : "active",
+    });
+
+    // Create wallet for the user
+    const wallet = await Wallet.create({
+      user: user._id,
+      balance: 0,
+    });
+
+    // Update user with wallet reference
+    user.wallet = wallet._id;
+    await user.save();
+
+    res.status(201).json({
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      walletBalance: wallet.balance,
+      token: generateJWT(user._id),
+    });
+  } catch (error) {
+    console.error("Register error:", error);
+    res.status(500).json({ message: "Registration failed" });
   }
-
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return res.status(400).json({ message: "User already exists" });
-  }
-
-  const user = await User.create({
-    username,
-    email,
-    password,
-    role: role === "owner" ? "owner" : "user",
-    status: role === "owner" ? "pending" : "active",
-  });
-
-  res.status(201).json({
-    _id: user._id,
-    username: user.username,
-    email: user.email,
-    role: user.role,
-    status: user.status,
-    token: generateJWT(user._id),
-  });
 };
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const user = await User.findOne({ email }).select("+password");
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password required" });
+    }
 
-  if (!user || !(await user.matchPassword(password))) {
-    return res.status(401).json({ message: "Invalid credentials" });
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user || !(await user.matchPassword(password))) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    if (user.status === "pending") {
+      return res.status(403).json({ message: "Owner approval pending" });
+    }
+
+    if (user.status === "banned") {
+      return res.status(403).json({ message: "User is banned" });
+    }
+
+    // Get wallet balance
+    let walletBalance = 0;
+    if (user.wallet) {
+      try {
+        const wallet = await Wallet.findById(user.wallet);
+        walletBalance = wallet?.balance || 0;
+      } catch (walletErr) {
+        console.error("Wallet fetch error:", walletErr);
+        walletBalance = 0;
+      }
+    }
+
+    res.json({
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      walletBalance,
+      token: generateJWT(user._id),
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Login failed", error: error.message });
   }
-
-  if (user.status === "pending") {
-    return res.status(403).json({ message: "Owner approval pending" });
-  }
-
-  if (user.status === "banned") {
-    return res.status(403).json({ message: "User is banned" });
-  }
-
-  res.json({
-    _id: user._id,
-    username: user.username,
-    email: user.email,
-    role: user.role,
-    token: generateJWT(user._id),
-  });
 };
 
 const getMe = async (req, res) => {
-  res.json(req.user);
+  try {
+    let walletBalance = 0;
+
+    if (!req.user.wallet) {
+      // Create wallet if missing (legacy users)
+      const newWallet = await Wallet.create({
+        user: req.user._id,
+        balance: 0,
+      });
+      await User.findByIdAndUpdate(req.user._id, { wallet: newWallet._id });
+      walletBalance = newWallet.balance;
+    } else if (req.user.wallet.balance !== undefined) {
+      // Already populated
+      walletBalance = req.user.wallet.balance;
+    } else {
+      // Not populated, fetch it
+      const walletDoc = await Wallet.findById(req.user.wallet);
+      walletBalance = walletDoc?.balance || 0;
+    }
+
+    res.json({
+      _id: req.user._id,
+      username: req.user.username,
+      email: req.user.email,
+      role: req.user.role,
+      phone: req.user.phone,
+      address: req.user.address,
+      profileImage: req.user.profileImage,
+      walletBalance,
+    });
+  } catch (error) {
+    console.error("getMe error:", error);
+    res.status(500).json({ message: "Error fetching user" });
+  }
 };
+
+
 
 const updateSettings = async (req, res) => {
   try {

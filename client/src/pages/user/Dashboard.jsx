@@ -31,7 +31,9 @@ function SimpleBarChart({ data, label }) {
               style={{ width: `${(data.values[i] / max) * 100}%` }}
             ></div>
           </div>
-          <p className="text-xs text-gray-400 mt-1">{data.values[i]} bookings</p>
+          <p className="text-xs text-gray-400 mt-1">
+            {data.values[i]} bookings
+          </p>
         </div>
       ))}
     </div>
@@ -42,13 +44,29 @@ function PieChartSimple({ data }) {
   const total = data.values.reduce((a, b) => a + b, 0);
   const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
 
+  // If no data, show empty state
+  if (total === 0) {
+    return (
+      <div className="flex items-center justify-center">
+        <div className="relative w-32 h-32 flex items-center justify-center">
+          <p className="text-gray-400 text-sm">No data available</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center justify-center">
       <div className="relative w-32 h-32">
-        <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+        <svg
+          viewBox="0 0 100 100"
+          className="w-full h-full transform -rotate-90"
+        >
           {data.values.map((val, i) => {
             const percentage = (val / total) * 100;
-            const offset = data.values.slice(0, i).reduce((a, b) => (a + b) * 360 / total, 0);
+            const offset =
+              (data.values.slice(0, i).reduce((a, b) => a + b, 0) / total) *
+              360;
             return (
               <circle
                 key={i}
@@ -59,7 +77,7 @@ function PieChartSimple({ data }) {
                 stroke={colors[i % colors.length]}
                 strokeWidth="8"
                 strokeDasharray={`${percentage * 2.51} 251`}
-                strokeDashoffset={-offset * 2.51 / 360}
+                strokeDashoffset={(-offset * 2.51) / 360}
                 className="transition-all duration-500"
               />
             );
@@ -80,7 +98,9 @@ function PieChartSimple({ data }) {
               style={{ backgroundColor: colors[i % colors.length] }}
             ></div>
             <span className="text-sm text-gray-400">{label}</span>
-            <span className="text-sm font-semibold text-white ml-auto">{data.values[i]}</span>
+            <span className="text-sm font-semibold text-white ml-auto">
+              {data.values[i]}
+            </span>
           </div>
         ))}
       </div>
@@ -113,13 +133,17 @@ export default function Dashboard() {
       const allBookings = Array.isArray(bookingsRes.data)
         ? bookingsRes.data
         : bookingsRes.data.bookings || [];
-      
+
       const active = allBookings.filter(
-        (b) => b.status === "ACTIVE" || b.status === "CHECKED_IN"
+        (b) => b.status === "ACTIVE" || b.status === "CHECKED_IN",
       ).length;
-      
-      const completed = allBookings.filter((b) => b.status === "COMPLETED").length;
-      const cancelled = allBookings.filter((b) => b.status === "CANCELLED").length;
+
+      const completed = allBookings.filter(
+        (b) => b.status === "COMPLETED",
+      ).length;
+      const cancelled = allBookings.filter(
+        (b) => b.status === "CANCELLED",
+      ).length;
 
       setStats({
         totalBookings: allBookings.length,
@@ -189,7 +213,6 @@ export default function Dashboard() {
                 })}
               </p>
             </div>
-            
           </div>
         </div>
 
@@ -200,10 +223,18 @@ export default function Dashboard() {
             <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600/20 to-cyan-600/20 border border-blue-500/30 p-8 hover:border-blue-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-4">
-                  <BookOpen className="text-blue-300 group-hover:text-blue-200" size={28} />
-                  <TrendingUp className="text-blue-400 group-hover:scale-110 transition-transform" size={20} />
+                  <BookOpen
+                    className="text-blue-300 group-hover:text-blue-200"
+                    size={28}
+                  />
+                  <TrendingUp
+                    className="text-blue-400 group-hover:scale-110 transition-transform"
+                    size={20}
+                  />
                 </div>
-                <p className="text-gray-400 text-sm mb-2 font-medium">Total Bookings</p>
+                <p className="text-gray-400 text-sm mb-2 font-medium">
+                  Total Bookings
+                </p>
                 <h3 className="text-4xl font-black text-white mb-2">
                   {stats.totalBookings}
                 </h3>
@@ -215,10 +246,18 @@ export default function Dashboard() {
             <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-600/20 to-emerald-600/20 border border-green-500/30 p-8 hover:border-green-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-4">
-                  <Clock className="text-green-300 group-hover:text-green-200" size={28} />
-                  <Eye className="text-green-400 group-hover:scale-110 transition-transform" size={20} />
+                  <Clock
+                    className="text-green-300 group-hover:text-green-200"
+                    size={28}
+                  />
+                  <Eye
+                    className="text-green-400 group-hover:scale-110 transition-transform"
+                    size={20}
+                  />
                 </div>
-                <p className="text-gray-400 text-sm mb-2 font-medium">Active Now</p>
+                <p className="text-gray-400 text-sm mb-2 font-medium">
+                  Active Now
+                </p>
                 <h3 className="text-4xl font-black text-white mb-2">
                   {stats.activeBookings}
                 </h3>
@@ -230,10 +269,18 @@ export default function Dashboard() {
             <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600/20 to-pink-600/20 border border-purple-500/30 p-8 hover:border-purple-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-4">
-                  <BarChart3 className="text-purple-300 group-hover:text-purple-200" size={28} />
-                  <Zap className="text-purple-400 group-hover:scale-110 transition-transform" size={20} />
+                  <BarChart3
+                    className="text-purple-300 group-hover:text-purple-200"
+                    size={28}
+                  />
+                  <Zap
+                    className="text-purple-400 group-hover:scale-110 transition-transform"
+                    size={20}
+                  />
                 </div>
-                <p className="text-gray-400 text-sm mb-2 font-medium">Completed</p>
+                <p className="text-gray-400 text-sm mb-2 font-medium">
+                  Completed
+                </p>
                 <h3 className="text-4xl font-black text-white mb-2">
                   {stats.completedBookings}
                 </h3>
@@ -245,10 +292,18 @@ export default function Dashboard() {
             <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-600/20 to-orange-600/20 border border-amber-500/30 p-8 hover:border-amber-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/20">
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-4">
-                  <Wallet className="text-amber-300 group-hover:text-amber-200" size={28} />
-                  <TrendingUp className="text-amber-400 group-hover:scale-110 transition-transform" size={20} />
+                  <Wallet
+                    className="text-amber-300 group-hover:text-amber-200"
+                    size={28}
+                  />
+                  <TrendingUp
+                    className="text-amber-400 group-hover:scale-110 transition-transform"
+                    size={20}
+                  />
                 </div>
-                <p className="text-gray-400 text-sm mb-2 font-medium">Wallet Balance</p>
+                <p className="text-gray-400 text-sm mb-2 font-medium">
+                  Wallet Balance
+                </p>
                 <h3 className="text-3xl font-black text-white mb-2">
                   ₹{stats.walletBalance?.toFixed(2) || "0.00"}
                 </h3>
@@ -265,12 +320,18 @@ export default function Dashboard() {
             <div className="bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded-2xl p-8">
               <div className="flex items-center gap-3 mb-8">
                 <PieChart className="text-purple-400" size={24} />
-                <h3 className="text-xl font-bold text-white">Booking Status Distribution</h3>
+                <h3 className="text-xl font-bold text-white">
+                  Booking Status Distribution
+                </h3>
               </div>
               <PieChartSimple
                 data={{
                   labels: ["Active", "Completed", "Cancelled"],
-                  values: [stats.activeBookings, stats.completedBookings, stats.cancelledBookings],
+                  values: [
+                    stats.activeBookings,
+                    stats.completedBookings,
+                    stats.cancelledBookings,
+                  ],
                 }}
               />
             </div>
@@ -279,12 +340,18 @@ export default function Dashboard() {
             <div className="bg-gradient-to-br from-white/10 to-white/5 border border-white/20 rounded-2xl p-8">
               <div className="flex items-center gap-3 mb-8">
                 <BarChart3 className="text-blue-400" size={24} />
-                <h3 className="text-xl font-bold text-white">Booking Breakdown</h3>
+                <h3 className="text-xl font-bold text-white">
+                  Booking Breakdown
+                </h3>
               </div>
               <SimpleBarChart
                 data={{
                   labels: ["Total", "Active", "Completed"],
-                  values: [stats.totalBookings, stats.activeBookings, stats.completedBookings],
+                  values: [
+                    stats.totalBookings,
+                    stats.activeBookings,
+                    stats.completedBookings,
+                  ],
                 }}
               />
             </div>
@@ -310,10 +377,18 @@ export default function Dashboard() {
 
                   <div className="relative z-10">
                     <div className="flex items-start justify-between mb-6">
-                      <div className={`${action.bgColor} p-4 rounded-xl border ${action.borderColor} group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-300`}>
-                        <Icon className={`${action.textColor} group-hover:brightness-125`} size={32} />
+                      <div
+                        className={`${action.bgColor} p-4 rounded-xl border ${action.borderColor} group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-300`}
+                      >
+                        <Icon
+                          className={`${action.textColor} group-hover:brightness-125`}
+                          size={32}
+                        />
                       </div>
-                      <ArrowRight className={`${action.textColor} group-hover:translate-x-2 transition-transform`} size={20} />
+                      <ArrowRight
+                        className={`${action.textColor} group-hover:translate-x-2 transition-transform`}
+                        size={20}
+                      />
                     </div>
                     <h3 className="text-2xl font-black text-white mb-2 group-hover:brightness-125 transition-all">
                       {action.title}
@@ -322,10 +397,15 @@ export default function Dashboard() {
                       {action.description}
                     </p>
                     <div className="mt-6 flex items-center gap-2">
-                      <span className={`${action.textColor} font-bold group-hover:translate-x-1 transition-transform`}>
+                      <span
+                        className={`${action.textColor} font-bold group-hover:translate-x-1 transition-transform`}
+                      >
                         Start exploring
                       </span>
-                      <ArrowRight className={`${action.textColor} group-hover:translate-x-2 transition-transform`} size={16} />
+                      <ArrowRight
+                        className={`${action.textColor} group-hover:translate-x-2 transition-transform`}
+                        size={16}
+                      />
                     </div>
                   </div>
                 </Link>
@@ -346,7 +426,10 @@ export default function Dashboard() {
                   Manage your parking lots, track revenue, and monitor bookings
                 </p>
               </div>
-              <ParkingCircle className="text-amber-400 hidden md:block" size={32} />
+              <ParkingCircle
+                className="text-amber-400 hidden md:block"
+                size={32}
+              />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Link
@@ -355,7 +438,10 @@ export default function Dashboard() {
               >
                 <ParkingCircle size={18} />
                 <span>My Parking Lots</span>
-                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                <ArrowRight
+                  size={16}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
               </Link>
               <Link
                 to="/owner/bookings"
@@ -363,7 +449,10 @@ export default function Dashboard() {
               >
                 <BookOpen size={18} />
                 <span>View Bookings</span>
-                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                <ArrowRight
+                  size={16}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
               </Link>
               <Link
                 to="/owner/revenue"
@@ -371,7 +460,10 @@ export default function Dashboard() {
               >
                 <TrendingUp size={18} />
                 <span>Revenue</span>
-                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                <ArrowRight
+                  size={16}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
               </Link>
             </div>
           </div>
@@ -397,7 +489,10 @@ export default function Dashboard() {
               >
                 <TrendingUp size={18} />
                 <span>Dashboard</span>
-                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                <ArrowRight
+                  size={16}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
               </Link>
               <Link
                 to="/admin/users"
@@ -405,7 +500,10 @@ export default function Dashboard() {
               >
                 <Eye size={18} />
                 <span>Users</span>
-                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                <ArrowRight
+                  size={16}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
               </Link>
               <Link
                 to="/admin/parkings"
@@ -413,7 +511,10 @@ export default function Dashboard() {
               >
                 <ParkingCircle size={18} />
                 <span>Parkings</span>
-                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                <ArrowRight
+                  size={16}
+                  className="group-hover:translate-x-1 transition-transform"
+                />
               </Link>
             </div>
           </div>

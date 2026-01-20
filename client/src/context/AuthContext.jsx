@@ -28,8 +28,12 @@ export const AuthProvider = ({ children }) => {
 
       try {
         const res = await api.get("/auth/me");
-        setUser(res.data);
-        localStorage.setItem("parkease_user", JSON.stringify(res.data));
+        const userData = {
+          ...res.data,
+          walletBalance: Number(res.data?.walletBalance) || 0,
+        };
+        setUser(userData);
+        localStorage.setItem("parkease_user", JSON.stringify(userData));
       } catch (err) {
         localStorage.removeItem("parkease_token");
         localStorage.removeItem("parkease_user");
@@ -46,10 +50,15 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
 
-    const { token, _id, username, email: userEmail, role } = res.data;
-    const userData = { _id, username, email: userEmail, role };
+    const userData = {
+      _id: res.data._id,
+      username: res.data.username,
+      email: res.data.email,
+      role: res.data.role,
+      walletBalance: Number(res.data?.walletBalance) || 0,
+    };
 
-    localStorage.setItem("parkease_token", token);
+    localStorage.setItem("parkease_token", res.data.token);
     localStorage.setItem("parkease_user", JSON.stringify(userData));
     setUser(userData);
 
@@ -60,10 +69,15 @@ export const AuthProvider = ({ children }) => {
   const register = async (data) => {
     const res = await api.post("/auth/register", data);
 
-    const { token, _id, username, email: userEmail, role } = res.data;
-    const userData = { _id, username, email: userEmail, role };
+    const userData = {
+      _id: res.data._id,
+      username: res.data.username,
+      email: res.data.email,
+      role: res.data.role,
+      walletBalance: Number(res.data?.walletBalance) || 0,
+    };
 
-    localStorage.setItem("parkease_token", token);
+    localStorage.setItem("parkease_token", res.data.token);
     localStorage.setItem("parkease_user", JSON.stringify(userData));
     setUser(userData);
 
@@ -78,8 +92,21 @@ export const AuthProvider = ({ children }) => {
     window.location.href = "/login";
   };
 
+  // Custom setUser that also updates localStorage
+  const updateUser = (newUserData) => {
+    const updatedUser = {
+      ...user,
+      ...newUserData,
+      walletBalance:
+        Number(newUserData?.walletBalance) || Number(user?.walletBalance) || 0,
+    };
+    setUser(updatedUser);
+    localStorage.setItem("parkease_user", JSON.stringify(updatedUser));
+  };
+
   const value = {
     user,
+    setUser: updateUser, // Allow other components to update user (e.g., after profile updates)
     isAuthenticated: !!user,
     role: user?.role || null,
     loading,

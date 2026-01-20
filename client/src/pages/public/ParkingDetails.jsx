@@ -460,37 +460,88 @@ export default function ParkingDetails() {
             </div>
 
             <div className="space-y-5">
-              {/* Status */}
+              {/* Status - use isBookedForWindow if time window is selected, otherwise use raw status */}
               <div className="bg-black/40 rounded-lg p-5 border border-white/10">
-                <p className="text-gray-400 text-sm mb-2">Status</p>
+                <p className="text-gray-400 text-sm mb-2">
+                  Status for Selected Time
+                </p>
                 <div className="flex items-center gap-3">
-                  <div
-                    className={`w-4 h-4 rounded-full ${
-                      spotDetailsModal.status === "available"
-                        ? "bg-green-500"
-                        : spotDetailsModal.status === "occupied"
-                          ? "bg-red-500"
-                          : spotDetailsModal.status === "held"
-                            ? "bg-yellow-500"
-                            : "bg-gray-500"
-                    }`}
-                  />
-                  <span className="text-white font-semibold capitalize text-lg">
-                    {spotDetailsModal.status}
-                  </span>
+                  {(() => {
+                    // Determine effective status based on time window
+                    let effectiveStatus = spotDetailsModal.status;
+                    let effectiveColor = "bg-gray-500";
+
+                    if (
+                      startTime &&
+                      endTime &&
+                      "isBookedForWindow" in spotDetailsModal
+                    ) {
+                      // Time window is set, use booking info
+                      effectiveStatus = spotDetailsModal.isBookedForWindow
+                        ? "Booked"
+                        : "Available";
+                      effectiveColor = spotDetailsModal.isBookedForWindow
+                        ? "bg-red-500"
+                        : "bg-green-500";
+                    } else {
+                      // No time window, show raw status
+                      effectiveColor =
+                        spotDetailsModal.status === "available"
+                          ? "bg-green-500"
+                          : spotDetailsModal.status === "occupied"
+                            ? "bg-red-500"
+                            : spotDetailsModal.status === "held"
+                              ? "bg-yellow-500"
+                              : "bg-gray-500";
+                    }
+
+                    return (
+                      <>
+                        <div
+                          className={`w-4 h-4 rounded-full ${effectiveColor}`}
+                        />
+                        <span className="text-white font-semibold capitalize text-lg">
+                          {effectiveStatus}
+                        </span>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
               {/* Status Description */}
-              <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-4">
-                <p className="text-blue-300 text-sm">
-                  {spotDetailsModal.status === "available"
-                    ? "✓ This spot is available for booking"
-                    : spotDetailsModal.status === "occupied"
-                      ? "× This spot is currently occupied"
-                      : spotDetailsModal.status === "held"
-                        ? "⏱ This spot is reserved by another user"
-                        : "This spot is unavailable"}
+              <div
+                className={`${
+                  startTime && endTime && !spotDetailsModal.isBookedForWindow
+                    ? "bg-green-500/20 border-green-500/30"
+                    : "bg-blue-500/20 border-blue-500/30"
+                } rounded-lg p-4 border`}
+              >
+                <p
+                  className={`${
+                    startTime && endTime && !spotDetailsModal.isBookedForWindow
+                      ? "text-green-300"
+                      : "text-blue-300"
+                  } text-sm`}
+                >
+                  {(() => {
+                    if (
+                      startTime &&
+                      endTime &&
+                      "isBookedForWindow" in spotDetailsModal
+                    ) {
+                      return spotDetailsModal.isBookedForWindow
+                        ? "× This spot is booked for the selected time"
+                        : "✓ This spot is available for your selected time";
+                    }
+                    return spotDetailsModal.status === "available"
+                      ? "✓ This spot is available for booking"
+                      : spotDetailsModal.status === "occupied"
+                        ? "× This spot is currently occupied"
+                        : spotDetailsModal.status === "held"
+                          ? "⏱ This spot is reserved by another user"
+                          : "This spot is unavailable";
+                  })()}
                 </p>
               </div>
 
@@ -510,17 +561,27 @@ export default function ParkingDetails() {
                 </div>
               </div>
 
-              {spotDetailsModal.status === "available" && (
-                <button
-                  onClick={() => {
-                    setSelectedSpot(spotDetailsModal);
-                    setSpotDetailsModal(null);
-                  }}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-3 rounded-lg font-bold transition"
-                >
-                  Select This Spot
-                </button>
-              )}
+              {(() => {
+                // Show Select button if available for the time window or if no time window set but spot is generally available
+                const canSelect =
+                  startTime &&
+                  endTime &&
+                  "isBookedForWindow" in spotDetailsModal
+                    ? !spotDetailsModal.isBookedForWindow
+                    : spotDetailsModal.status === "available";
+
+                return canSelect ? (
+                  <button
+                    onClick={() => {
+                      setSelectedSpot(spotDetailsModal);
+                      setSpotDetailsModal(null);
+                    }}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white py-3 rounded-lg font-bold transition"
+                  >
+                    Select This Spot
+                  </button>
+                ) : null;
+              })()}
 
               <button
                 onClick={() => setSpotDetailsModal(null)}

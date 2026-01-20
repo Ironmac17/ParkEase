@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const Wallet = require("./Wallet");
 
 const userSchema = new mongoose.Schema(
   {

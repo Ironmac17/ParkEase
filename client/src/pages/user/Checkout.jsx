@@ -11,6 +11,7 @@ import {
   Lock,
   Loader,
   Info,
+  Check,
 } from "lucide-react";
 
 export default function Checkout() {
@@ -26,7 +27,9 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false);
   const [estimatedAmount, setEstimatedAmount] = useState(0);
   const [holdTimeLeft, setHoldTimeLeft] = useState(600); // 10 minutes in seconds
-  const [walletBalance, setWalletBalance] = useState(0);
+
+  // Use wallet balance directly from user context - it's already set during login
+  const walletBalance = Number(user?.walletBalance) || 0;
 
   const {
     spotId,
@@ -43,7 +46,6 @@ export default function Checkout() {
       return;
     }
     fetchDetails();
-    fetchUserBalance();
   }, []);
 
   // Countdown timer for hold (10 minutes in seconds)
@@ -55,19 +57,6 @@ export default function Checkout() {
       return () => clearInterval(timer);
     }
   }, [loading, holdTimeLeft]);
-
-  const fetchUserBalance = async () => {
-    try {
-      if (user?._id) {
-        const res = await axios.get("/user/profile");
-        const balance = Number(res.data?.walletBalance) || 0;
-        setWalletBalance(balance);
-      }
-    } catch (err) {
-      console.error("Failed to fetch wallet balance", err);
-      setWalletBalance(0);
-    }
-  };
 
   const fetchDetails = async () => {
     try {
@@ -320,32 +309,45 @@ export default function Checkout() {
                   : "bg-blue-600/20 border-blue-500/30"
               }`}
             >
-              <h3 className="font-semibold mb-3">Payment Method</h3>
-              <div>
-                <p className="text-gray-400 text-sm mb-1">Wallet Balance</p>
-                <p className="text-3xl font-bold">
-                  ₹{walletBalance.toFixed(2)}
-                </p>
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Info className="w-4 h-4" />
+                Payment Method
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Wallet Balance</p>
+                  <p className="text-3xl font-bold">
+                    ₹{walletBalance.toFixed(2)}
+                  </p>
+                </div>
+
+                {walletBalance < estimatedAmount && (
+                  <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 flex gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-red-300">
+                      <p className="mb-2">
+                        You need ₹{(estimatedAmount - walletBalance).toFixed(2)}{" "}
+                        more
+                      </p>
+                      <button
+                        onClick={() => navigate("/wallet")}
+                        className="text-red-200 hover:text-red-100 underline font-semibold"
+                      >
+                        Add funds to wallet →
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {walletBalance >= estimatedAmount && (
+                  <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3 flex gap-2">
+                    <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-green-300">
+                      Remaining: ₹{(walletBalance - estimatedAmount).toFixed(2)}
+                    </p>
+                  </div>
+                )}
               </div>
-
-              {walletBalance < estimatedAmount && (
-                <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 mt-4 flex gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-300">
-                    You need ₹{(estimatedAmount - walletBalance).toFixed(2)}{" "}
-                    more
-                  </p>
-                </div>
-              )}
-
-              {walletBalance >= estimatedAmount && (
-                <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3 mt-4 flex gap-2">
-                  <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-green-300">
-                    Remaining: ₹{(walletBalance - estimatedAmount).toFixed(2)}
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Action Buttons */}
