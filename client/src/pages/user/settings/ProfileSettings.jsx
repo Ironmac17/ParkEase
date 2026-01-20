@@ -66,8 +66,17 @@ const ProfileSettings = () => {
     }
 
     try {
-      const res = await axios.post("/vehicles", newVehicle);
-      setVehicles([...vehicles, res.data.vehicle]);
+      // map client fields to server expected fields
+      const payload = {
+        make: newVehicle.model,
+        model: newVehicle.model,
+        licensePlate: newVehicle.registrationNumber,
+        color: newVehicle.color,
+        type: newVehicle.type,
+      };
+
+      const res = await axios.post("/vehicles", payload);
+      setVehicles([...vehicles, res.data]);
       showToast("Vehicle added successfully", "success");
       setNewVehicle({
         registrationNumber: "",

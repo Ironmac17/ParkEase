@@ -10,6 +10,8 @@ export default function useParkingSearch() {
     ev: false,
     security: false,
     maxPrice: 500,
+    startTime: "",
+    endTime: "",
   });
 
   useEffect(() => {
@@ -32,9 +34,11 @@ export default function useParkingSearch() {
         params: {
           search,
           covered: filters.covered,
-          ev: filters.ev,
+          isEV: filters.ev,
           security: filters.security,
           maxPrice: filters.maxPrice,
+          startTime: filters.startTime || undefined,
+          endTime: filters.endTime || undefined,
         },
       });
       setParkingLots(res.data);

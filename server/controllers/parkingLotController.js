@@ -45,37 +45,126 @@ const createParkingLot = async (req, res) => {
 };
 
 const getParkingLots = async (req, res) => {
-  const lots = await ParkingLot.find({ isActive: true }).lean();
+  // support time-aware availability and basic filters
+  const { startTime, endTime, maxPrice, isEV } = req.query;
+
+  const lotFilter = { isActive: true };
+  if (maxPrice) {
+    lotFilter.baseRate = { $lte: Number(maxPrice) };
+  }
+
+  let lots = await ParkingLot.find(lotFilter).lean();
   const lotIds = lots.map((l) => l._id);
 
-  const spots = await ParkingSpot.aggregate([
+  // If no time window provided, fall back to simple status counts
+  if (!startTime || !endTime) {
+    const spots = await ParkingSpot.aggregate([
+      { $match: { parkingLot: { $in: lotIds } } },
+      {
+        $group: {
+          _id: "$parkingLot",
+          totalSpots: { $sum: 1 },
+          freeSpots: {
+            $sum: { $cond: [{ $eq: ["$status", "available"] }, 1, 0] },
+          },
+          evSpots: { $sum: { $cond: ["$isEV", 1, 0] } },
+        },
+      },
+    ]);
+
+    const statsMap = {};
+    spots.forEach((s) => {
+      statsMap[s._id.toString()] = s;
+    });
+
+    let response = lots.map((lot) => {
+      const s = statsMap[lot._id.toString()] || {
+        totalSpots: 0,
+        freeSpots: 0,
+        evSpots: 0,
+      };
+
+      return {
+        ...lot,
+        stats: {
+          totalSpots: s.totalSpots,
+          freeSpots: s.freeSpots,
+          evSpots: s.evSpots,
+          occupancyRate:
+            s.totalSpots === 0
+              ? 0
+              : Math.round(((s.totalSpots - s.freeSpots) / s.totalSpots) * 100),
+        },
+      };
+    });
+
+    if (isEV === "true" || isEV === "1") {
+      response = response.filter((r) => r.stats.evSpots > 0);
+    }
+
+    return res.json(response);
+  }
+
+  // Parse window
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+
+  // Aggregate spots and whether they have overlapping bookings in the window
+  const spotsAgg = await ParkingSpot.aggregate([
     { $match: { parkingLot: { $in: lotIds } } },
+    {
+      $lookup: {
+        from: "bookings",
+        let: { spotId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$parkingSpot", "$$spotId"] },
+                  { $in: ["$status", ["confirmed", "active"]] },
+                  { $lt: ["$startTime", end] },
+                  { $gt: ["$endTime", start] },
+                ],
+              },
+            },
+          },
+          { $limit: 1 },
+        ],
+        as: "overlaps",
+      },
+    },
+    {
+      $project: {
+        parkingLot: 1,
+        isEV: 1,
+        isBooked: { $gt: [{ $size: "$overlaps" }, 0] },
+      },
+    },
     {
       $group: {
         _id: "$parkingLot",
         totalSpots: { $sum: 1 },
-        freeSpots: {
-          $sum: {
-            $cond: [{ $eq: ["$status", "available"] }, 1, 0],
-          },
-        },
-        evSpots: {
-          $sum: { $cond: ["$isEV", 1, 0] },
+        freeSpots: { $sum: { $cond: [{ $eq: ["$isBooked", false] }, 1, 0] } },
+        evSpots: { $sum: { $cond: ["$isEV", 1, 0] } },
+        evFreeSpots: {
+          $sum: { $cond: [{ $and: ["$isEV", { $eq: ["$isBooked", false] }] }, 1, 0] },
         },
       },
     },
   ]);
 
   const statsMap = {};
-  spots.forEach((s) => {
+  spotsAgg.forEach((s) => {
     statsMap[s._id.toString()] = s;
   });
 
-  const response = lots.map((lot) => {
+  let response = lots.map((lot) => {
     const s = statsMap[lot._id.toString()] || {
       totalSpots: 0,
       freeSpots: 0,
       evSpots: 0,
+      evFreeSpots: 0,
     };
 
     return {
@@ -84,15 +173,18 @@ const getParkingLots = async (req, res) => {
         totalSpots: s.totalSpots,
         freeSpots: s.freeSpots,
         evSpots: s.evSpots,
+        evFreeSpots: s.evFreeSpots || 0,
         occupancyRate:
           s.totalSpots === 0
             ? 0
-            : Math.round(
-                ((s.totalSpots - s.freeSpots) / s.totalSpots) * 100
-              ),
+            : Math.round(((s.totalSpots - s.freeSpots) / s.totalSpots) * 100),
       },
     };
   });
+
+  if (isEV === "true" || isEV === "1") {
+    response = response.filter((r) => r.stats.evFreeSpots > 0);
+  }
 
   res.json(response);
 };
@@ -134,8 +226,8 @@ const getParkingLotById = async (req, res) => {
         s.totalSpots === 0
           ? 0
           : Math.round(
-              ((s.totalSpots - s.freeSpots) / s.totalSpots) * 100
-            ),
+            ((s.totalSpots - s.freeSpots) / s.totalSpots) * 100
+          ),
     },
   });
 };

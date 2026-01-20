@@ -71,8 +71,11 @@ const MyBookings = () => {
       showToast("Booking extended successfully", "success");
       setShowExtendModal(null);
       setNewEndTime("");
-    } catch {
-      showToast("Failed to extend booking", "error");
+    } catch (err) {
+      showToast(
+        err?.response?.data?.message || "Failed to extend booking",
+        "error",
+      );
     } finally {
       setExtendingId(null);
     }
@@ -89,8 +92,11 @@ const MyBookings = () => {
       );
       showToast("Booking cancelled. Amount refunded.", "success");
       setShowCancelModal(null);
-    } catch {
-      showToast("Failed to cancel booking", "error");
+    } catch (err) {
+      showToast(
+        err?.response?.data?.message || "Failed to cancel booking",
+        "error",
+      );
     } finally {
       setCancelingId(null);
     }

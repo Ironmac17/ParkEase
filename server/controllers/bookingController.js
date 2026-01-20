@@ -58,6 +58,21 @@ const createBooking = async (req, res) => {
   // 4️⃣ Calculate booking amount using dynamic pricing
   const parkingLot = await ParkingLot.findById(heldSpot.parkingLot);
 
+  // 4a️⃣ Check for overlapping bookings on this spot
+  const overlapping = await Booking.findOne({
+    parkingSpot: heldSpot._id,
+    status: { $in: ["confirmed", "active"] },
+    startTime: { $lt: end },
+    endTime: { $gt: start },
+  });
+
+  if (overlapping) {
+    await releaseSpot(spotId, req.user._id);
+    return res
+      .status(409)
+      .json({ code: "CONFLICT", message: "Spot reserved for selected time" });
+  }
+
   const bookingAmount = await calculateAmount({
     parkingLot,
     fromTime: start,
@@ -342,6 +357,21 @@ const extendBooking = async (req, res) => {
     return res
       .status(400)
       .json({ message: "Extension too long" });
+  }
+
+  // Check for overlapping bookings that would conflict with this extension
+  const overlap = await Booking.findOne({
+    parkingSpot: booking.parkingSpot,
+    _id: { $ne: booking._id },
+    status: { $in: ["confirmed", "active"] },
+    startTime: { $lt: newEnd },
+    endTime: { $gt: booking.endTime },
+  });
+
+  if (overlap) {
+    return res
+      .status(409)
+      .json({ code: "CONFLICT", message: "Extension overlaps another reservation" });
   }
 
   // 🔹 Calculate extension cost

@@ -4,84 +4,190 @@ import axios from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../hooks/useSocket";
 import { ToastContext } from "../../context/ToastContext";
-import { X, Clock, DollarSign } from "lucide-react";
+import { X } from "lucide-react";
 
 export default function ParkingDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const { user } = useAuth();
   const socket = useSocket();
   const { showToast } = useContext(ToastContext);
 
+  const [loading, setLoading] = useState(true);
   const [lot, setLot] = useState(null);
   const [spots, setSpots] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [spotDetailsModal, setSpotDetailsModal] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [vehicleId, setVehicleId] = useState("");
 
-  useEffect(() => {
-    fetchData();
+  /* ---------------- FETCH DATA ---------------- */
 
-    // Socket is optional - real-time updates are nice to have but not required
-    if (socket) {
-      socket.emit("join_parking_lot", id);
-      socket.on("spot_update", handleSpotUpdate);
-
-      return () => {
-        socket.emit("leave_parking_lot", id);
-        socket.off("spot_update", handleSpotUpdate);
-      };
-    }
-  }, [id, socket]);
-
-  const fetchData = async () => {
-    try {
-      const [lotRes, spotRes, vehicleRes] = await Promise.all([
-        axios.get(`/parking-lots/${id}`),
-        axios.get(`/parking-lots/${id}/spots`),
-        user
-          ? axios.get("/vehicles").catch(() => Promise.resolve({ data: [] }))
-          : Promise.resolve({ data: [] }),
-      ]);
-
-      setLot(lotRes.data);
-      setSpots(
-        Array.isArray(spotRes.data) ? spotRes.data : spotRes.data.spots || [],
-      );
-      setVehicles(Array.isArray(vehicleRes.data) ? vehicleRes.data : []);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      showToast("Failed to load parking details", "error");
-      navigate("/discover");
-    } finally {
-      setLoading(false);
-    }
+  const fetchLot = async () => {
+    const res = await axios.get(`/parking-lots/${id}`, {
+      params: startTime || endTime ? { startTime, endTime } : {},
+    });
+    setLot(res.data);
   };
 
-  const handleSpotUpdate = ({ spotId, status }) => {
-    setSpots((prev) =>
-      prev.map((s) => (s._id === spotId ? { ...s, status } : s)),
-    );
+  const fetchSpots = async () => {
+    const res = await axios.get(`/parking-lots/${id}/spots`, {
+      params: { startTime, endTime },
+    });
+    setSpots(res.data);
+  };
+
+  const fetchVehicles = async () => {
+    if (!user) return;
+    try {
+      const res = await axios.get("/vehicles");
+      setVehicles(res.data);
+    } catch (err) {
+      // If vehicles endpoint isn't available or returns 404, gracefully continue
+      if (err.response && err.response.status !== 404) console.error(err);
+      setVehicles([]);
+    }
   };
 
   const selectSpot = (spot) => {
-    if (spot.status !== "available") {
-      setSpotDetailsModal(spot);
-      return;
+    // Open the spot details modal and load today's schedule for the spot
+    fetchSpotSchedule(spot._id, spot);
+  };
+
+  const fetchSpotSchedule = async (spotId, spotObj = null) => {
+    try {
+      const params = {};
+      if (startTime) {
+        const d = new Date(startTime);
+        params.date = d.toISOString().slice(0, 10);
+      }
+
+      const res = await axios.get(`/parking-lots/spot/${spotId}/schedule`, {
+        params,
+      });
+
+      if (spotObj) {
+        setSpotDetailsModal({ ...spotObj, schedule: res.data });
+      } else {
+        setSpotDetailsModal((prev) =>
+          prev && prev._id === spotId
+            ? { ...prev, schedule: res.data }
+            : { _id: spotId, schedule: res.data },
+        );
+      }
+    } catch (err) {
+      console.error("Failed to fetch spot schedule:", err);
     }
-    setSelectedSpot(spot);
+  };
+
+  /* ---------------- EFFECTS ---------------- */
+
+  useEffect(() => {
+    (async () => {
+      try {
+        await Promise.all([fetchLot(), fetchSpots(), fetchVehicles()]);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!loading) fetchSpots();
+  }, [startTime, endTime]);
+
+  /* ---------------- HELPERS ---------------- */
+
+  const renderSchedule = ({ start, end, bookings }) => {
+    try {
+      const windowStart = new Date(start);
+      const windowEnd = new Date(end);
+
+      if (!bookings || bookings.length === 0) {
+        return (
+          <p className="text-sm text-gray-400">
+            No bookings — spot free all day
+          </p>
+        );
+      }
+
+      const items = [];
+      let cursor = new Date(windowStart);
+
+      bookings.forEach((b) => {
+        const bStart = new Date(b.startTime);
+        const bEnd = new Date(b.endTime);
+
+        if (bStart > cursor) {
+          items.push({ type: "free", start: cursor, end: bStart });
+        }
+
+        items.push({
+          type: "booked",
+          start: bStart,
+          end: bEnd,
+          by: b.user?.username,
+        });
+
+        if (bEnd > cursor) cursor = bEnd;
+      });
+
+      if (cursor < windowEnd) {
+        items.push({ type: "free", start: cursor, end: windowEnd });
+      }
+
+      return (
+        <div className="space-y-2">
+          {items.map((it, idx) => (
+            <div
+              key={idx}
+              className={`p-2 rounded border ${
+                it.type === "free"
+                  ? "bg-green-500/10 border-green-500/20"
+                  : "bg-red-500/10 border-red-500/20"
+              }`}
+            >
+              <div className="flex justify-between text-xs">
+                <span
+                  className={
+                    it.type === "free"
+                      ? "text-green-300 font-semibold"
+                      : "text-red-300 font-semibold"
+                  }
+                >
+                  {it.type === "free" ? "Free" : "Booked"}
+                  {it.by && ` · ${it.by}`}
+                </span>
+                <span className="text-gray-300">
+                  {it.start.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}{" "}
+                  -{" "}
+                  {it.end.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    } catch {
+      return <p className="text-sm text-gray-400">Schedule unavailable</p>;
+    }
   };
 
   const proceedToCheckout = () => {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
+    if (!user) return navigate("/login");
 
     if (!selectedSpot || !startTime || !endTime || !vehicleId) {
       showToast("Please complete all booking details", "warning");
@@ -98,6 +204,9 @@ export default function ParkingDetails() {
       return;
     }
 
+    // Find the selected vehicle object to pass it along
+    const selectedVehicle = vehicles.find((v) => v._id === vehicleId);
+
     navigate("/checkout", {
       state: {
         spotId: selectedSpot._id,
@@ -105,17 +214,17 @@ export default function ParkingDetails() {
         startTime,
         endTime,
         vehicleId,
+        vehicle: selectedVehicle, // Pass full vehicle object
       },
     });
   };
 
+  /* ---------------- RENDER GUARDS ---------------- */
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-400">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p>Loading parking details...</p>
-        </div>
+        Loading parking details...
       </div>
     );
   }
@@ -123,18 +232,12 @@ export default function ParkingDetails() {
   if (!lot) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-400">
-        <div className="text-center">
-          <p className="text-xl mb-4">Parking lot not found</p>
-          <button
-            onClick={() => navigate("/discover")}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
-          >
-            Back to Discover
-          </button>
-        </div>
+        Parking lot not found
       </div>
     );
   }
+
+  /* ---------------- JSX ---------------- */
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0b0f1a] via-[#1a1f2e] to-[#0b0f1a] text-white px-6 py-8">
@@ -178,33 +281,63 @@ export default function ParkingDetails() {
             </div>
           ) : (
             <div className="grid grid-cols-5 gap-3">
-              {spots.map((spot) => (
-                <div
-                  key={spot._id}
-                  onClick={() => selectSpot(spot)}
-                  className={`aspect-square rounded-lg flex flex-col items-center justify-center cursor-pointer border-2 transition-all duration-300 font-bold text-sm
-                    ${
-                      spot.status === "available"
-                        ? "border-green-500/50 bg-green-500/10 text-green-400 hover:border-green-500 hover:bg-green-500/20"
-                        : spot.status === "held"
-                          ? "border-yellow-500/50 bg-yellow-500/10 text-yellow-400 cursor-not-allowed opacity-60"
-                          : spot.status === "occupied"
-                            ? "border-red-500/50 bg-red-500/10 text-red-400 cursor-not-allowed opacity-60"
-                            : "border-gray-600/50 bg-gray-600/10 text-gray-400 cursor-not-allowed opacity-60"
-                    }
-                    ${
-                      selectedSpot?._id === spot._id
-                        ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-[#0b0f1a]"
-                        : ""
-                    }
-                  `}
-                >
-                  <span>{spot.label}</span>
-                  <span className="text-xs mt-1 opacity-70">
-                    {spot.status === "available" ? "✓ Free" : spot.status}
-                  </span>
-                </div>
-              ))}
+              {spots.map((spot) => {
+                // Priority: if startTime/endTime are set, use isBookedForWindow
+                // Otherwise fall back to spot.status
+                let effectiveStatus = spot.status;
+
+                if (startTime && endTime && "isBookedForWindow" in spot) {
+                  // When a time window is provided, override status with booking info
+                  effectiveStatus = spot.isBookedForWindow
+                    ? "booked"
+                    : "available";
+                } else if (!startTime || !endTime) {
+                  // If no time window set, don't show spot status yet (require user to set times first)
+                  effectiveStatus = "unknown";
+                }
+
+                return (
+                  <div
+                    key={spot._id}
+                    onClick={() => {
+                      if (
+                        (startTime && endTime) ||
+                        effectiveStatus === "available"
+                      ) {
+                        selectSpot(spot);
+                      }
+                    }}
+                    className={`aspect-square rounded-lg flex flex-col items-center justify-center border-2 transition-all duration-300 font-bold text-sm
+                      ${
+                        effectiveStatus === "available"
+                          ? "border-green-500/50 bg-green-500/10 text-green-400 hover:border-green-500 hover:bg-green-500/20 cursor-pointer"
+                          : effectiveStatus === "held" ||
+                              effectiveStatus === "booked"
+                            ? "border-yellow-500/50 bg-yellow-500/10 text-yellow-400 cursor-not-allowed opacity-60"
+                            : effectiveStatus === "occupied"
+                              ? "border-red-500/50 bg-red-500/10 text-red-400 cursor-not-allowed opacity-60"
+                              : effectiveStatus === "unknown"
+                                ? "border-gray-500/50 bg-gray-500/10 text-gray-400 cursor-default opacity-50"
+                                : "border-gray-600/50 bg-gray-600/10 text-gray-400 cursor-not-allowed opacity-60"
+                      }
+                      ${
+                        selectedSpot?._id === spot._id
+                          ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-[#0b0f1a]"
+                          : ""
+                      }
+                    `}
+                  >
+                    <span>{spot.label}</span>
+                    <span className="text-xs mt-1 opacity-70">
+                      {effectiveStatus === "available"
+                        ? "✓ Free"
+                        : effectiveStatus === "unknown"
+                          ? "Set time"
+                          : effectiveStatus}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -336,10 +469,10 @@ export default function ParkingDetails() {
                       spotDetailsModal.status === "available"
                         ? "bg-green-500"
                         : spotDetailsModal.status === "occupied"
-                        ? "bg-red-500"
-                        : spotDetailsModal.status === "held"
-                        ? "bg-yellow-500"
-                        : "bg-gray-500"
+                          ? "bg-red-500"
+                          : spotDetailsModal.status === "held"
+                            ? "bg-yellow-500"
+                            : "bg-gray-500"
                     }`}
                   />
                   <span className="text-white font-semibold capitalize text-lg">
@@ -354,10 +487,10 @@ export default function ParkingDetails() {
                   {spotDetailsModal.status === "available"
                     ? "✓ This spot is available for booking"
                     : spotDetailsModal.status === "occupied"
-                    ? "× This spot is currently occupied"
-                    : spotDetailsModal.status === "held"
-                    ? "⏱ This spot is reserved by another user"
-                    : "This spot is unavailable"}
+                      ? "× This spot is currently occupied"
+                      : spotDetailsModal.status === "held"
+                        ? "⏱ This spot is reserved by another user"
+                        : "This spot is unavailable"}
                 </p>
               </div>
 
@@ -396,9 +529,19 @@ export default function ParkingDetails() {
                 Close
               </button>
             </div>
+            <div className="mt-6">
+              <h4 className="text-lg font-semibold mb-3">Today's Schedule</h4>
+              {spotDetailsModal.schedule ? (
+                <div className="space-y-2 text-sm text-gray-300">
+                  {renderSchedule(spotDetailsModal.schedule)}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400">No schedule loaded</p>
+              )}
+            </div>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

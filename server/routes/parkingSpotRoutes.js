@@ -7,7 +7,8 @@ const {
   deleteSpot,
   toggleSpotStatus,
   getParkingSpots,
-  getSpotById
+  getSpotById,
+  getSpotSchedule,
 } = require("../controllers/parkingSpotController");
 
 const protect = require("../middleware/authMiddleware");
@@ -40,5 +41,6 @@ router.patch(
 
 router.get("/:id/spots", getParkingSpots);
 router.get("/spot/:spotId", getSpotById);
+router.get("/spot/:spotId/schedule", getSpotSchedule);
 
 module.exports = router;

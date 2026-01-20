@@ -10,6 +10,9 @@ const FILTERS = [
 export default function Filters({ filters, setFilters }) {
   const [priceRange, setPriceRange] = useState(filters.maxPrice || 500);
   const [showPriceFilter, setShowPriceFilter] = useState(false);
+  const [timeWindowOpen, setTimeWindowOpen] = useState(false);
+  const [start, setStart] = useState(filters.startTime || "");
+  const [end, setEnd] = useState(filters.endTime || "");
 
   const toggle = (key) => {
     setFilters({ ...filters, [key]: !filters[key] });
@@ -19,6 +22,11 @@ export default function Filters({ filters, setFilters }) {
     const value = parseInt(e.target.value);
     setPriceRange(value);
     setFilters({ ...filters, maxPrice: value });
+  };
+
+  const applyTimeWindow = () => {
+    setFilters({ ...filters, startTime: start, endTime: end });
+    setTimeWindowOpen(false);
   };
 
   return (
@@ -44,6 +52,53 @@ export default function Filters({ filters, setFilters }) {
       </div>
 
       {/* Price Range Slider */}
+      {/* Time Window */}
+      <div className="relative">
+        <button
+          onClick={() => setTimeWindowOpen(!timeWindowOpen)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:border-white/30 transition"
+        >
+          <span className="text-sm">Time</span>
+        </button>
+
+        {timeWindowOpen && (
+          <div className="absolute top-full mt-2 left-0 bg-[#0b0f1a] border border-white/20 rounded-lg p-4 z-50 w-72 shadow-lg">
+            <label className="block text-sm text-gray-300 mb-2">Start</label>
+            <input
+              type="datetime-local"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              className="w-full bg-white/5 p-2 rounded mb-3 text-white"
+            />
+            <label className="block text-sm text-gray-300 mb-2">End</label>
+            <input
+              type="datetime-local"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+              className="w-full bg-white/5 p-2 rounded mb-3 text-white"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setStart("");
+                  setEnd("");
+                  setFilters({ ...filters, startTime: "", endTime: "" });
+                  setTimeWindowOpen(false);
+                }}
+                className="px-3 py-1 rounded bg-gray-700 text-sm text-white"
+              >
+                Clear
+              </button>
+              <button
+                onClick={applyTimeWindow}
+                className="px-3 py-1 rounded bg-blue-600 text-sm text-white"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
       <div className="relative">
         <button
           onClick={() => setShowPriceFilter(!showPriceFilter)}

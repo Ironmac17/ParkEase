@@ -194,7 +194,85 @@ const getParkingSpots = async (req, res) => {
     label: 1,
   });
 
+  // If client passed a time window, mark spots that are booked during that window
+  const { startTime, endTime } = req.query;
+  if (startTime && endTime) {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    const Booking = require("../models/Booking");
+
+    // find bookings overlapping the window for this lot
+    const overlapping = await Booking.find({
+      parkingLot: parkingLotId,
+      status: { $in: ["confirmed", "active"] },
+      startTime: { $lt: end },
+      endTime: { $gt: start },
+    }).select("parkingSpot startTime endTime status user");
+
+    const bookedSet = new Map();
+    overlapping.forEach((b) => {
+      bookedSet.set(b.parkingSpot.toString(), bookedSet.get(b.parkingSpot.toString()) || []);
+      bookedSet.get(b.parkingSpot.toString()).push(b);
+    });
+
+    const augmented = spots.map((s) => {
+      const sObj = s.toObject();
+      const list = bookedSet.get(s._id.toString()) || [];
+      sObj.isBookedForWindow = list.length > 0;
+      sObj.bookingsForWindow = list.map((b) => ({
+        _id: b._id,
+        startTime: b.startTime,
+        endTime: b.endTime,
+        status: b.status,
+        user: b.user,
+      }));
+      return sObj;
+    });
+
+    return res.json(augmented);
+  }
+
   res.json(spots);
+};
+
+const getSpotSchedule = async (req, res) => {
+  const { spotId } = req.params;
+
+  const { date, startTime, endTime } = req.query;
+
+  // Determine window: prefer explicit startTime/endTime, else use provided date (full day), else today
+  let start, end;
+  if (startTime && endTime) {
+    start = new Date(startTime);
+    end = new Date(endTime);
+  } else if (date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    start = new Date(d);
+    end = new Date(d);
+    end.setHours(23, 59, 59, 999);
+  } else {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    start = new Date(d);
+    end = new Date(d);
+    end.setHours(23, 59, 59, 999);
+  }
+
+  const Booking = require("../models/Booking");
+
+  const bookings = await Booking.find({
+    parkingSpot: spotId,
+    status: { $in: ["confirmed", "active"] },
+    startTime: { $lt: end },
+    endTime: { $gt: start },
+  })
+    .select("startTime endTime status user amountPaid")
+    .sort({ startTime: 1 })
+    .populate("user", "username");
+
+  res.json({ start, end, bookings });
 };
 
 const getSpotById = async (req, res) => {
@@ -215,4 +293,5 @@ module.exports = {
   toggleSpotStatus,
   getParkingSpots,
   getSpotById,
+  getSpotSchedule,
 };

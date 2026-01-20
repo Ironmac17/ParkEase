@@ -25,9 +25,17 @@ export default function Checkout() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [estimatedAmount, setEstimatedAmount] = useState(0);
-  const [holdTimeLeft, setHoldTimeLeft] = useState(5);
+  const [holdTimeLeft, setHoldTimeLeft] = useState(600); // 10 minutes in seconds
+  const [walletBalance, setWalletBalance] = useState(0);
 
-  const { spotId, parkingLotId, startTime, endTime, vehicleId } = state || {};
+  const {
+    spotId,
+    parkingLotId,
+    startTime,
+    endTime,
+    vehicleId,
+    vehicle: vehicleFromState,
+  } = state || {};
 
   useEffect(() => {
     if (!state) {
@@ -35,20 +43,44 @@ export default function Checkout() {
       return;
     }
     fetchDetails();
+    fetchUserBalance();
   }, []);
 
-  // Countdown timer for hold
+  // Countdown timer for hold (10 minutes in seconds)
   useEffect(() => {
     if (!loading && holdTimeLeft > 0) {
       const timer = setInterval(() => {
-        setHoldTimeLeft((prev) => prev - 1);
+        setHoldTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
       }, 1000);
       return () => clearInterval(timer);
     }
   }, [loading, holdTimeLeft]);
 
+  const fetchUserBalance = async () => {
+    try {
+      if (user?._id) {
+        const res = await axios.get("/user/profile");
+        const balance = Number(res.data?.walletBalance) || 0;
+        setWalletBalance(balance);
+      }
+    } catch (err) {
+      console.error("Failed to fetch wallet balance", err);
+      setWalletBalance(0);
+    }
+  };
+
   const fetchDetails = async () => {
     try {
+      // Use vehicle from state if available, otherwise fetch from user's list
+      if (vehicleFromState) {
+        setVehicle(vehicleFromState);
+      } else if (vehicleId && user?.vehicles) {
+        const selectedVehicle = user.vehicles.find((v) => v._id === vehicleId);
+        if (selectedVehicle) {
+          setVehicle(selectedVehicle);
+        }
+      }
+
       const [lotRes, spotRes] = await Promise.all([
         axios.get(`/parking-lots/${parkingLotId}`),
         axios.get(`/parking-lots/spot/${spotId}`),
@@ -56,16 +88,6 @@ export default function Checkout() {
 
       setLot(lotRes.data);
       setSpot(spotRes.data);
-
-      // Only fetch vehicle if vehicleId exists
-      if (vehicleId) {
-        try {
-          const vehicleRes = await axios.get(`/vehicles/${vehicleId}`);
-          setVehicle(vehicleRes.data);
-        } catch (err) {
-          console.warn("Vehicle not found, skipping");
-        }
-      }
 
       const start = new Date(startTime);
       const end = new Date(endTime);
@@ -104,7 +126,15 @@ export default function Checkout() {
       showToast("Booking confirmed!", "success");
       navigate(`/booking-success/${res.data._id}`);
     } catch (err) {
-      showToast(err.response?.data?.message || "Booking failed", "error");
+      const code = err.response?.data?.code;
+      if (code === "CONFLICT") {
+        showToast(
+          err.response?.data?.message || "Spot already reserved",
+          "error",
+        );
+      } else {
+        showToast(err.response?.data?.message || "Booking failed", "error");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -125,7 +155,7 @@ export default function Checkout() {
     );
   }
 
-  const walletInsufficient = user?.walletBalance < estimatedAmount;
+  const walletInsufficient = walletBalance < estimatedAmount;
 
   return (
     <div className="min-h-screen bg-[#0b0f1a] text-white px-4 py-8">
@@ -181,7 +211,7 @@ export default function Checkout() {
                     <div>
                       <p className="text-gray-400 text-sm mb-1">Registration</p>
                       <p className="font-semibold">
-                        {vehicle?.registrationNumber}
+                        {vehicle?.registrationNumber || vehicle?.licensePlate}
                       </p>
                     </div>
                     <div>
@@ -189,13 +219,23 @@ export default function Checkout() {
                       <p className="font-semibold">{vehicle?.model}</p>
                     </div>
                   </div>
-                  <div>
-                    <p className="text-gray-400 text-sm mb-1">Color</p>
-                    <p className="font-semibold">{vehicle?.color}</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-gray-400 text-sm mb-1">Color</p>
+                      <p className="font-semibold">{vehicle?.color || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-sm mb-1">Type</p>
+                      <p className="font-semibold capitalize">
+                        {vehicle?.type || "Vehicle"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <p className="text-gray-400">Vehicle information loading...</p>
+                <p className="text-gray-400 text-sm">
+                  Loading vehicle details...
+                </p>
               )}
             </div>
 
@@ -264,8 +304,10 @@ export default function Checkout() {
                 </p>
                 <p className="text-sm text-blue-200">
                   Complete payment within{" "}
-                  <span className="font-bold">{holdTimeLeft}</span> minutes to
-                  confirm.
+                  <span className="font-bold">
+                    {Math.floor(holdTimeLeft / 60)}m {holdTimeLeft % 60}s
+                  </span>{" "}
+                  to confirm.
                 </p>
               </div>
             </div>
@@ -273,7 +315,7 @@ export default function Checkout() {
             {/* Wallet Balance */}
             <div
               className={`border rounded-2xl p-6 ${
-                walletInsufficient
+                walletBalance < estimatedAmount
                   ? "bg-red-600/20 border-red-500/30"
                   : "bg-blue-600/20 border-blue-500/30"
               }`}
@@ -282,26 +324,25 @@ export default function Checkout() {
               <div>
                 <p className="text-gray-400 text-sm mb-1">Wallet Balance</p>
                 <p className="text-3xl font-bold">
-                  ₹{user?.walletBalance?.toFixed(2) || "0.00"}
+                  ₹{walletBalance.toFixed(2)}
                 </p>
               </div>
 
-              {walletInsufficient && (
+              {walletBalance < estimatedAmount && (
                 <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 mt-4 flex gap-2">
                   <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-red-300">
-                    You need ₹
-                    {(estimatedAmount - user?.walletBalance).toFixed(2)} more
+                    You need ₹{(estimatedAmount - walletBalance).toFixed(2)}{" "}
+                    more
                   </p>
                 </div>
               )}
 
-              {!walletInsufficient && (
+              {walletBalance >= estimatedAmount && (
                 <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3 mt-4 flex gap-2">
                   <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-green-300">
-                    Remaining: ₹
-                    {(user?.walletBalance - estimatedAmount).toFixed(2)}
+                    Remaining: ₹{(walletBalance - estimatedAmount).toFixed(2)}
                   </p>
                 </div>
               )}
@@ -317,7 +358,7 @@ export default function Checkout() {
                 Cancel
               </button>
               <button
-                disabled={submitting || walletInsufficient}
+                disabled={submitting || walletBalance < estimatedAmount}
                 onClick={confirmBooking}
                 className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-4 rounded-xl font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2 text-lg"
               >
