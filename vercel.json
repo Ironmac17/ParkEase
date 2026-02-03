@@ -1,7 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "server/index.js": {
+    "server/server.js": {
       "runtime": "nodejs18.x"
     }
   },
