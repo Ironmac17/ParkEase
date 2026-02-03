@@ -1,6 +1,5 @@
 const express = require("express");
 const http = require("http");
-const path = require("path");
 const dotenv = require("dotenv");
 const cors = require("cors");
 // const morgan = require("morgan");
@@ -74,15 +73,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/festivals", festivalRoutes);
 
 // app.use(errorHandler);
-
-const clientBuildPath = path.join(__dirname, "../client/dist");
-
-app.use(express.static(clientBuildPath));
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(clientBuildPath, "index.html"));
-});
-
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ParkEase API running on Vercel" });
