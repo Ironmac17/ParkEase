@@ -1,5 +1,6 @@
 const express = require("express");
 const http = require("http");
+const path = require("path");
 const dotenv = require("dotenv");
 const cors = require("cors");
 // const morgan = require("morgan");
@@ -74,8 +75,23 @@ app.use("/api/festivals", festivalRoutes);
 
 // app.use(errorHandler);
 
-const PORT = process.env.PORT || 8000;
+const clientBuildPath = path.join(__dirname, "../client/dist");
 
-server.listen(PORT, () => {
-  console.log(`✅ ParkEase server running on port ${PORT}`);
+app.use(express.static(clientBuildPath));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(clientBuildPath, "index.html"));
 });
+
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ParkEase API running on Vercel" });
+});
+
+module.exports = app;
+
+// const PORT = process.env.PORT || 8000;
+
+// server.listen(PORT, () => {
+//   console.log(`✅ ParkEase server running on port ${PORT}`);
+// });
