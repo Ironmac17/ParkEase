@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAdminWallets } from "../../api/wallet";
+import { formatCurrency } from "../../utils/formatCurrency";
 
 const AdminWallets = () => {
   const [wallets, setWallets] = useState([]);
@@ -14,15 +15,13 @@ const AdminWallets = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-4">
-      <h2 className="text-xl font-semibold mb-4">
-        Wallet Ledger (Audit)
-      </h2>
+      <h2 className="text-xl font-semibold mb-4">Wallet Ledger (Audit)</h2>
 
       <div className="bg-white rounded-xl shadow-sm p-4">
-        {wallets.map(w => (
+        {wallets.map((w) => (
           <div key={w._id} className="mb-6">
             <p className="font-medium">
-              {w.user.email} — ₹{w.balance}
+              {w.user.email} — {formatCurrency(w.balance)}
             </p>
           </div>
         ))}

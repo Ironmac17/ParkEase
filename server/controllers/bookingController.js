@@ -46,7 +46,26 @@ const createBooking = async (req, res) => {
   // 3️⃣ Atomically hold parking spot
   const heldSpot = await holdSpot(spotId, req.user._id);
   if (!heldSpot) {
-    return res.status(409).json({ message: "Spot unavailable" });
+    // Return current spot status to help debug why hold failed
+    const spotDoc = await ParkingSpot.findById(spotId).lean();
+    console.warn("[booking] holdSpot failed", {
+      spotId,
+      userId: req.user._id.toString(),
+      spotStatus: spotDoc ? spotDoc.status : null,
+      heldBy: spotDoc ? spotDoc.heldBy : null,
+      holdExpiresAt: spotDoc ? spotDoc.holdExpiresAt : null,
+    });
+
+    return res.status(409).json({
+      message: "Spot unavailable",
+      spot: spotDoc
+        ? {
+          status: spotDoc.status,
+          heldBy: spotDoc.heldBy,
+          holdExpiresAt: spotDoc.holdExpiresAt,
+        }
+        : null,
+    });
   }
 
   // Safety: release spot if closed
@@ -59,6 +78,7 @@ const createBooking = async (req, res) => {
   const parkingLot = await ParkingLot.findById(heldSpot.parkingLot);
 
   // 4a️⃣ Check for overlapping bookings on this spot
+  // Only check for confirmed or active bookings (not completed or cancelled)
   const overlapping = await Booking.findOne({
     parkingSpot: heldSpot._id,
     status: { $in: ["confirmed", "active"] },
@@ -67,10 +87,24 @@ const createBooking = async (req, res) => {
   });
 
   if (overlapping) {
+    console.warn("[booking] overlapping booking found", {
+      spotId: heldSpot._id.toString(),
+      overlappingId: overlapping._id.toString(),
+      overlappingStart: overlapping.startTime,
+      overlappingEnd: overlapping.endTime,
+      overlappingStatus: overlapping.status,
+    });
     await releaseSpot(spotId, req.user._id);
-    return res
-      .status(409)
-      .json({ code: "CONFLICT", message: "Spot reserved for selected time" });
+    return res.status(409).json({
+      code: "CONFLICT",
+      message: "Spot unavailable for selected time",
+      overlapping: {
+        bookingId: overlapping._id,
+        startTime: overlapping.startTime,
+        endTime: overlapping.endTime,
+        status: overlapping.status,
+      },
+    });
   }
 
   const bookingAmount = await calculateAmount({
@@ -85,8 +119,9 @@ const createBooking = async (req, res) => {
   }
 
   // 5️⃣ Debit wallet BEFORE creating booking
+  let updatedWalletBalance = null;
   try {
-    await debitWallet({
+    updatedWalletBalance = await debitWallet({
       userId: req.user._id,
       amount: bookingAmount,
       reason: "Parking booking payment",
@@ -144,7 +179,15 @@ const createBooking = async (req, res) => {
   });
 
   // 9️⃣ Mark spot as occupied
-  heldSpot.status = "occupied";
+  // If booking starts now or in the past, mark occupied immediately.
+  // For future bookings, release the hold so spot remains available for other non-overlapping windows
+  const nowForSpot = new Date();
+  if (start <= nowForSpot) {
+    heldSpot.status = "occupied";
+  } else {
+    // Release hold but keep spot available. Overlapping bookings are prevented via DB booking checks.
+    heldSpot.status = "available";
+  }
   heldSpot.heldBy = null;
   heldSpot.holdExpiresAt = null;
   await heldSpot.save();
@@ -155,8 +198,16 @@ const createBooking = async (req, res) => {
     status: "occupied",
   });
 
-  // 🔟 Final response
-  res.status(201).json(booking);
+  // � Broadcast booking creation to all admins and owner
+  global.io.emit("booking:created", {
+    bookingId: booking._id,
+    userId: booking.user,
+    parkingLotId: heldSpot.parkingLot,
+    amount: bookingAmount,
+  });
+
+  // �🔟 Final response (include updated wallet balance so client can refresh)
+  res.status(201).json({ booking, walletBalance: updatedWalletBalance });
 };
 
 
@@ -251,6 +302,14 @@ const checkOutBooking = async (req, res) => {
   const spot = await ParkingSpot.findById(booking.parkingSpot);
   spot.status = "available";
   await spot.save();
+
+  // 📢 Broadcast booking completion to admins and owner
+  global.io.emit("booking:completed", {
+    bookingId: booking._id,
+    userId: booking.user._id,
+    parkingLotId: booking.parkingLot,
+    status: "completed",
+  });
 
   sendEmail({
     to: booking.user.email,

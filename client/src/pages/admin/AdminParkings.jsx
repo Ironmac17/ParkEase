@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import {
   getAllParkings,
   approveParking,
-  suspendParking
+  suspendParking,
 } from "../../api/admin";
 import ParkingRow from "../../components/admin/ParkingRow";
 import { exportToCSV } from "../../utils/exportCsv";
+import { useSocket } from "../../hooks/useSocket";
 
 const AdminParkings = () => {
   const [parkings, setParkings] = useState([]);
+  const socket = useSocket();
 
   const loadParkings = async () => {
     const res = await getAllParkings();
@@ -18,6 +20,20 @@ const AdminParkings = () => {
   useEffect(() => {
     loadParkings();
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("parking:approved", loadParkings);
+    socket.on("parking:suspended", loadParkings);
+    socket.on("parking:created", loadParkings);
+
+    return () => {
+      socket.off("parking:approved", loadParkings);
+      socket.off("parking:suspended", loadParkings);
+      socket.off("parking:created", loadParkings);
+    };
+  }, [socket]);
 
   const handleAction = async (parking) => {
     if (parking.status === "PENDING") {
@@ -29,12 +45,12 @@ const AdminParkings = () => {
   };
 
   const handleExport = () => {
-    const rows = parkings.map(p => ({
+    const rows = parkings.map((p) => ({
       name: p.name,
       owner: p.owner?.email,
       status: p.status,
       totalSpots: p.totalSpots,
-      city: p.city
+      city: p.city,
     }));
 
     exportToCSV(rows, "parkings.csv");
@@ -61,12 +77,8 @@ const AdminParkings = () => {
           <div>Action</div>
         </div>
 
-        {parkings.map(p => (
-          <ParkingRow
-            key={p._id}
-            parking={p}
-            onAction={handleAction}
-          />
+        {parkings.map((p) => (
+          <ParkingRow key={p._id} parking={p} onAction={handleAction} />
         ))}
       </div>
     </div>

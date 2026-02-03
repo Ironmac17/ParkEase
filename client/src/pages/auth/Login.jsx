@@ -23,8 +23,16 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await login(form.email, form.password);
-      navigate("/dashboard");
+      const userData = await login(form.email, form.password);
+
+      // Redirect based on role
+      if (userData.role === "owner") {
+        navigate("/owner/dashboard");
+      } else if (userData.role === "admin") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
       setError(err?.response?.data?.message || "Invalid email or password");
     } finally {

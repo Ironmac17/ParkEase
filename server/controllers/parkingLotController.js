@@ -58,6 +58,8 @@ const getParkingLots = async (req, res) => {
 
   // If no time window provided, fall back to simple status counts
   if (!startTime || !endTime) {
+    // Treat expired holds as available for reporting
+    const now = new Date();
     const spots = await ParkingSpot.aggregate([
       { $match: { parkingLot: { $in: lotIds } } },
       {
@@ -65,7 +67,18 @@ const getParkingLots = async (req, res) => {
           _id: "$parkingLot",
           totalSpots: { $sum: 1 },
           freeSpots: {
-            $sum: { $cond: [{ $eq: ["$status", "available"] }, 1, 0] },
+            $sum: {
+              $cond: [
+                {
+                  $or: [
+                    { $eq: ["$status", "available"] },
+                    { $and: [{ $eq: ["$status", "held"] }, { $lt: ["$holdExpiresAt", now] }] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
           },
           evSpots: { $sum: { $cond: ["$isEV", 1, 0] } },
         },
@@ -196,6 +209,7 @@ const getParkingLotById = async (req, res) => {
     return res.status(404).json({ message: "Parking lot not found" });
   }
 
+  const now = new Date();
   const stats = await ParkingSpot.aggregate([
     { $match: { parkingLot: lot._id } },
     {
@@ -204,7 +218,16 @@ const getParkingLotById = async (req, res) => {
         totalSpots: { $sum: 1 },
         freeSpots: {
           $sum: {
-            $cond: [{ $eq: ["$status", "available"] }, 1, 0],
+            $cond: [
+              {
+                $or: [
+                  { $eq: ["$status", "available"] },
+                  { $and: [{ $eq: ["$status", "held"] }, { $lt: ["$holdExpiresAt", now] }] },
+                ],
+              },
+              1,
+              0,
+            ],
           },
         },
         evSpots: {

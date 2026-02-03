@@ -19,6 +19,9 @@ export default function Navbar() {
     }
   };
 
+  // For owners/admins, hide booking-related nav items
+  const isOwnerOrAdmin = user?.role === "owner" || user?.role === "admin";
+
   return (
     <div className="flex items-center justify-between px-6 py-4 backdrop-blur">
       <div className="flex items-center gap-8">
@@ -28,13 +31,15 @@ export default function Navbar() {
         >
           ParkEase
         </Link>
-        <Link
-          to="/discover"
-          className="text-gray-300 hover:text-white transition"
-        >
-          Find Parking
-        </Link>
-        {user && (
+        {!isOwnerOrAdmin && (
+          <Link
+            to="/discover"
+            className="text-gray-300 hover:text-white transition"
+          >
+            Find Parking
+          </Link>
+        )}
+        {user && !isOwnerOrAdmin && (
           <>
             <Link
               to="/my-bookings"
@@ -48,23 +53,23 @@ export default function Navbar() {
             >
               Wallet
             </Link>
-            {user.role === "owner" && (
-              <Link
-                to="/owner/dashboard"
-                className="text-gray-300 hover:text-white transition"
-              >
-                Owner Dashboard
-              </Link>
-            )}
-            {user.role === "admin" && (
-              <Link
-                to="/admin/dashboard"
-                className="text-gray-300 hover:text-white transition"
-              >
-                Admin Panel
-              </Link>
-            )}
           </>
+        )}
+        {user?.role === "owner" && (
+          <Link
+            to="/owner/dashboard"
+            className="text-gray-300 hover:text-white transition"
+          >
+            Owner Dashboard
+          </Link>
+        )}
+        {user?.role === "admin" && (
+          <Link
+            to="/admin/dashboard"
+            className="text-gray-300 hover:text-white transition"
+          >
+            Admin Panel
+          </Link>
         )}
       </div>
     </div>

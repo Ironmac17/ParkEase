@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
-import {
-  getAllUsers,
-  blockUser,
-  unblockUser
-} from "../../api/admin";
+import { getAllUsers, blockUser, unblockUser } from "../../api/admin";
 import UserRow from "../../components/admin/UserRow";
 import { exportToCSV } from "../../utils/exportCsv";
+import { useSocket } from "../../hooks/useSocket";
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
+  const socket = useSocket();
 
   const loadUsers = async () => {
     const res = await getAllUsers();
@@ -18,6 +16,20 @@ const AdminUsers = () => {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("user:blocked", loadUsers);
+    socket.on("user:unblocked", loadUsers);
+    socket.on("user:created", loadUsers);
+
+    return () => {
+      socket.off("user:blocked", loadUsers);
+      socket.off("user:unblocked", loadUsers);
+      socket.off("user:created", loadUsers);
+    };
+  }, [socket]);
 
   const toggleUser = async (user) => {
     if (user.isBlocked) {
@@ -29,11 +41,11 @@ const AdminUsers = () => {
   };
 
   const handleExport = () => {
-    const rows = users.map(u => ({
+    const rows = users.map((u) => ({
       email: u.email,
       role: u.role,
       status: u.isBlocked ? "Blocked" : "Active",
-      createdAt: new Date(u.createdAt).toLocaleString()
+      createdAt: new Date(u.createdAt).toLocaleString(),
     }));
 
     exportToCSV(rows, "users.csv");
@@ -60,12 +72,8 @@ const AdminUsers = () => {
           <div>Action</div>
         </div>
 
-        {users.map(u => (
-          <UserRow
-            key={u._id}
-            user={u}
-            onToggle={toggleUser}
-          />
+        {users.map((u) => (
+          <UserRow key={u._id} user={u} onToggle={toggleUser} />
         ))}
       </div>
     </div>

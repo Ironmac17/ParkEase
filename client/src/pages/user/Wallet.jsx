@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "../../api/axios";
+import { formatCurrency } from "../../utils/formatCurrency";
 import {
   Wallet as WalletIcon,
   TrendingUp,
@@ -65,7 +66,7 @@ const Wallet = () => {
       });
 
       setPaymentMessage(
-        `✓ Successfully added ₹${parseFloat(amount).toFixed(2)} to your wallet!`,
+        `✓ Successfully added ${formatCurrency(parseFloat(amount))} to your wallet!`,
       );
       setAmount("100");
       await loadWallet();
@@ -98,7 +99,7 @@ const Wallet = () => {
             <div>
               <p className="text-gray-400 text-sm mb-2">Wallet Balance</p>
               <h2 className="text-5xl font-bold text-white">
-                ₹{wallet?.balance?.toFixed(2) || "0.00"}
+                {formatCurrency(wallet?.balance)}
               </h2>
             </div>
             <div className="bg-blue-500/20 p-4 rounded-xl">
@@ -121,7 +122,7 @@ const Wallet = () => {
                       : "bg-white/5 border-white/20 text-gray-400 hover:border-white/30"
                   }`}
                 >
-                  ₹{val}
+                  {formatCurrency(val, { decimals: 0 })}
                 </button>
               ))}
             </div>
@@ -224,8 +225,8 @@ const Wallet = () => {
                       tx.type === "credit" ? "text-green-400" : "text-red-400"
                     }`}
                   >
-                    {tx.type === "credit" ? "+" : "-"}₹
-                    {Math.abs(tx.amount).toFixed(2)}
+                    {tx.type === "credit" ? "+" : "-"}
+                    {formatCurrency(Math.abs(tx.amount))}
                   </p>
                 </div>
               ))}

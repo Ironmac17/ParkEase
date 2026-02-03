@@ -26,8 +26,16 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await register(form);
-      navigate("/dashboard");
+      const userData = await register(form);
+
+      // Redirect based on role
+      if (userData.role === "owner") {
+        navigate("/owner/dashboard");
+      } else if (userData.role === "admin") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
       setError(err?.response?.data?.message || "Registration failed");
     } finally {

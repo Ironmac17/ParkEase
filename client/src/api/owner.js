@@ -4,6 +4,10 @@ export const getOwnerDashboard = () => {
   return api.get("/owner/dashboard");
 };
 
+export const getOwnerRevenue = () => {
+  return api.get("/owner/revenue");
+};
+
 export const getOwnerLots = () => {
   return api.get("/owner/lots");
 };

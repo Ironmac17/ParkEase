@@ -13,13 +13,21 @@ import {
   QrCode,
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
-
+import { downloadReceiptAsImage } from "../../utils/receiptGenerator";
 const MyBookings = () => {
   const { user } = useAuth();
   const { showToast } = useContext(ToastContext);
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const downloadReceipt = (booking) => {
+    try {
+      downloadReceiptAsImage(booking, booking.qrCode);
+    } catch (err) {
+      showToast("Failed to download receipt", "error");
+    }
+  };
 
   const [showExtendModal, setShowExtendModal] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(null);
@@ -108,6 +116,15 @@ const MyBookings = () => {
       : status === "completed"
         ? "bg-blue-500/20 border-blue-500 text-blue-400"
         : "bg-red-500/20 border-red-500 text-red-400";
+
+  const isUpcomingBooking = (booking) => {
+    const endTime = new Date(booking.endTime);
+    const now = new Date();
+    return (
+      endTime > now &&
+      (booking.status === "active" || booking.status === "confirmed")
+    );
+  };
 
   const filteredBookings =
     filterStatus === "all"
@@ -257,64 +274,59 @@ const MyBookings = () => {
                 {/* Actions */}
                 {/* Actions */}
                 <div className="md:col-span-3">
-                  <div
-                    className="flex items-center justify-between gap-3
-                  bg-white/4 border border-white/10 rounded-xl px-3 py-2"
-                  >
-                    {/* Utility actions */}
-                    <div className="flex gap-2">
-                      {(b.status === "active" || b.status === "confirmed") && (
-                        <button
-                          onClick={() => setShowQRModal(b._id)}
-                          className="w-9 h-9 rounded-lg
-                     bg-blue-600/20 border border-blue-500/40
-                     hover:bg-blue-600/35 hover:border-blue-500
-                     flex items-center justify-center
-                     text-blue-300 transition"
-                          title="Show QR"
-                        >
-                          <QrCode size={16} />
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => downloadReceipt(b)}
-                        className="w-9 h-9 rounded-lg
+                  <div className="flex items-center justify-end gap-2">
+                    {/* Download Receipt */}
+                    <button
+                      onClick={() => downloadReceipt(b)}
+                      className="p-2 rounded-lg
                    bg-green-600/20 border border-green-500/40
                    hover:bg-green-600/35 hover:border-green-500
-                   flex items-center justify-center
                    text-green-300 transition"
-                        title="Download receipt"
-                      >
-                        <Download size={16} />
-                      </button>
-                    </div>
+                      title="Download receipt"
+                    >
+                      <Download size={18} />
+                    </button>
 
-                    {/* Primary actions */}
-                    {(b.status === "active" || b.status === "confirmed") && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setShowExtendModal(b._id)}
-                          className="px-4 py-2 rounded-lg
+                    {/* Show QR for upcoming bookings */}
+                    {isUpcomingBooking(b) && (
+                      <button
+                        onClick={() => setShowQRModal(b._id)}
+                        className="p-2 rounded-lg
+                     bg-blue-600/20 border border-blue-500/40
+                     hover:bg-blue-600/35 hover:border-blue-500
+                     text-blue-300 transition"
+                        title="Show QR Code"
+                      >
+                        <QrCode size={18} />
+                      </button>
+                    )}
+
+                    {/* Extend for upcoming bookings */}
+                    {isUpcomingBooking(b) && (
+                      <button
+                        onClick={() => setShowExtendModal(b._id)}
+                        className="px-3 py-2 rounded-lg
                      bg-cyan-600/25 border border-cyan-500/40
                      hover:bg-cyan-600/40 hover:border-cyan-500
                      text-cyan-300 text-xs font-semibold
-                     transition"
-                        >
-                          Extend
-                        </button>
+                     transition whitespace-nowrap"
+                      >
+                        Extend
+                      </button>
+                    )}
 
-                        <button
-                          onClick={() => setShowCancelModal(b._id)}
-                          className="px-4 py-2 rounded-lg
+                    {/* Cancel for upcoming bookings */}
+                    {isUpcomingBooking(b) && (
+                      <button
+                        onClick={() => setShowCancelModal(b._id)}
+                        className="px-3 py-2 rounded-lg
                      bg-red-600/20 border border-red-500/40
                      hover:bg-red-600/35 hover:border-red-500
                      text-red-300 text-xs font-semibold
-                     transition"
-                        >
-                          Cancel
-                        </button>
-                      </div>
+                     transition whitespace-nowrap"
+                      >
+                        Cancel
+                      </button>
                     )}
                   </div>
                 </div>
@@ -326,52 +338,192 @@ const MyBookings = () => {
 
       {/* EXTEND MODAL */}
       {showExtendModal && extendBooking && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-[#0b0f1a] p-6 rounded-xl w-full max-w-md border border-white/10">
-            <input
-              type="datetime-local"
-              value={newEndTime}
-              onChange={(e) => setNewEndTime(e.target.value)}
-              className="w-full bg-white/10 p-3 rounded mb-4 text-white"
-            />
-            <button
-              onClick={handleExtendBooking}
-              className="w-full bg-blue-600 py-3 rounded text-white font-bold"
-            >
-              Extend Booking
-            </button>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0b0f1a] rounded-2xl w-full max-w-md border border-white/10 overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-cyan-600/20 to-blue-600/20 border-b border-white/10 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-white font-bold text-lg">Extend Booking</h2>
+              <button
+                onClick={() => setShowExtendModal(null)}
+                className="text-gray-400 hover:text-white transition text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Select new end time
+                </label>
+                <input
+                  type="datetime-local"
+                  value={newEndTime}
+                  onChange={(e) => setNewEndTime(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 p-3 rounded-lg text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none transition"
+                />
+              </div>
+
+              {/* Booking info */}
+              <div className="bg-white/4 border border-white/10 rounded-lg p-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Parking Lot</span>
+                  <span className="text-white font-semibold">
+                    {extendBooking.parkingLot?.name}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Current End Time</span>
+                  <span className="text-white font-semibold">
+                    {new Date(extendBooking.endTime).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowExtendModal(null)}
+                  className="flex-1 px-4 py-2 rounded-lg
+                   bg-white/5 border border-white/10
+                   hover:bg-white/10 hover:border-white/20
+                   text-gray-300 text-sm font-semibold
+                   transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleExtendBooking}
+                  disabled={extendingId === showExtendModal}
+                  className="flex-1 px-4 py-2 rounded-lg
+                   bg-cyan-600/30 border border-cyan-500/40
+                   hover:bg-cyan-600/40 hover:border-cyan-500
+                   text-cyan-300 text-sm font-semibold
+                   disabled:opacity-50 disabled:cursor-not-allowed
+                   transition"
+                >
+                  {extendingId === showExtendModal
+                    ? "Extending..."
+                    : "Extend Booking"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* CANCEL MODAL */}
       {showCancelModal && cancelBooking && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-[#0b0f1a] p-6 rounded-xl w-full max-w-md border border-white/10">
-            <p className="text-red-400 text-xl mb-4">
-              Refund ₹{cancelBooking.amountPaid}
-            </p>
-            <button
-              onClick={handleCancelBooking}
-              className="w-full bg-red-600 py-3 rounded text-white font-bold"
-            >
-              Confirm Cancel
-            </button>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0b0f1a] rounded-2xl w-full max-w-md border border-white/10 overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-red-600/20 to-red-700/20 border-b border-white/10 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-white font-bold text-lg">Cancel Booking</h2>
+              <button
+                onClick={() => setShowCancelModal(null)}
+                className="text-gray-400 hover:text-white transition text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div className="bg-red-600/20 border border-red-500/30 rounded-lg p-4">
+                <p className="text-red-400 text-center">
+                  <span className="block text-sm text-gray-400 mb-1">
+                    Amount to be refunded
+                  </span>
+                  <span className="text-2xl font-bold">
+                    ₹{cancelBooking.amountPaid}
+                  </span>
+                </p>
+              </div>
+
+              <div className="bg-white/4 border border-white/10 rounded-lg p-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Parking Lot</span>
+                  <span className="text-white font-semibold">
+                    {cancelBooking.parkingLot?.name}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Booking Time</span>
+                  <span className="text-white font-semibold">
+                    {new Date(cancelBooking.startTime).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-400 text-center">
+                Are you sure you want to cancel this booking?
+              </p>
+
+              {/* Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowCancelModal(null)}
+                  className="flex-1 px-4 py-2 rounded-lg
+                   bg-white/5 border border-white/10
+                   hover:bg-white/10 hover:border-white/20
+                   text-gray-300 text-sm font-semibold
+                   transition"
+                >
+                  Keep Booking
+                </button>
+                <button
+                  onClick={handleCancelBooking}
+                  disabled={cancelingId === showCancelModal}
+                  className="flex-1 px-4 py-2 rounded-lg
+                   bg-red-600/30 border border-red-500/40
+                   hover:bg-red-600/40 hover:border-red-500
+                   text-red-300 text-sm font-semibold
+                   disabled:opacity-50 disabled:cursor-not-allowed
+                   transition"
+                >
+                  {cancelingId === showCancelModal
+                    ? "Cancelling..."
+                    : "Confirm Cancel"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* QR MODAL */}
       {showQRModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl">
-            <QRCodeCanvas value={showQRModal} size={220} />
-            <button
-              onClick={() => setShowQRModal(null)}
-              className="mt-4 w-full bg-blue-600 py-2 rounded text-white"
-            >
-              Close
-            </button>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#0b0f1a] rounded-2xl border border-white/10 overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border-b border-white/10 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-white font-bold text-lg">Booking QR Code</h2>
+              <button
+                onClick={() => setShowQRModal(null)}
+                className="text-gray-400 hover:text-white transition text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 flex flex-col items-center gap-4">
+              <QRCodeCanvas value={showQRModal} size={240} level="H" />
+              <p className="text-sm text-gray-400 text-center">
+                Show this QR code at the parking entrance
+              </p>
+              <button
+                onClick={() => setShowQRModal(null)}
+                className="w-full px-4 py-2 rounded-lg
+                 bg-blue-600/30 border border-blue-500/40
+                 hover:bg-blue-600/40 hover:border-blue-500
+                 text-blue-300 text-sm font-semibold
+                 transition"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

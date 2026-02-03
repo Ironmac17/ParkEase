@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { formatCurrency } from "../../utils/formatCurrency";
 import {
   MapPin,
   BookOpen,
@@ -305,7 +306,7 @@ export default function Dashboard() {
                   Wallet Balance
                 </p>
                 <h3 className="text-3xl font-black text-white mb-2">
-                  ₹{stats.walletBalance?.toFixed(2) || "0.00"}
+                  {formatCurrency(stats.walletBalance)}
                 </h3>
                 <p className="text-xs text-gray-500">Available balance</p>
               </div>

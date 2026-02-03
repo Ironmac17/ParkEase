@@ -32,7 +32,7 @@ const Toast = () => {
   };
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md">
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[99999] max-w-md">
       {toasts.map((toast) => (
         <div
           key={toast.id}

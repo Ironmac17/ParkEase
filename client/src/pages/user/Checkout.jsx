@@ -3,6 +3,7 @@ import { useEffect, useState, useContext } from "react";
 import axios from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 import { ToastContext } from "../../context/ToastContext";
+import { formatCurrency } from "../../utils/formatCurrency";
 import {
   Clock,
   MapPin,
@@ -17,7 +18,7 @@ import {
 export default function Checkout() {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { showToast } = useContext(ToastContext);
 
   const [lot, setLot] = useState(null);
@@ -113,7 +114,16 @@ export default function Checkout() {
       });
 
       showToast("Booking confirmed!", "success");
-      navigate(`/booking-success/${res.data._id}`);
+      // Refresh full user object from server so UI stays in sync
+      try {
+        const me = await axios.get("/auth/me");
+        if (me?.data && setUser) setUser(me.data);
+      } catch (e) {
+        console.warn("Failed to refresh user after booking", e);
+      }
+
+      const bookingId = res.data?.booking?._id || res.data?._id;
+      navigate(`/booking-success/${bookingId}`);
     } catch (err) {
       const code = err.response?.data?.code;
       if (code === "CONFLICT") {
@@ -267,7 +277,9 @@ export default function Checkout() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-300">Hourly Rate</span>
-                  <span className="font-semibold">₹{lot?.baseRate}/hr</span>
+                  <span className="font-semibold">
+                    {formatCurrency(lot?.baseRate)}/hr
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-300">Duration</span>
@@ -277,7 +289,7 @@ export default function Checkout() {
                   <div className="flex justify-between">
                     <span className="text-lg font-semibold">Total Amount</span>
                     <span className="text-3xl font-bold text-green-300">
-                      ₹{estimatedAmount.toFixed(2)}
+                      {formatCurrency(estimatedAmount)}
                     </span>
                   </div>
                 </div>
@@ -317,7 +329,7 @@ export default function Checkout() {
                 <div>
                   <p className="text-gray-400 text-sm mb-1">Wallet Balance</p>
                   <p className="text-3xl font-bold">
-                    ₹{walletBalance.toFixed(2)}
+                    {formatCurrency(walletBalance)}
                   </p>
                 </div>
 
@@ -326,8 +338,8 @@ export default function Checkout() {
                     <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-red-300">
                       <p className="mb-2">
-                        You need ₹{(estimatedAmount - walletBalance).toFixed(2)}{" "}
-                        more
+                        You need{" "}
+                        {formatCurrency(estimatedAmount - walletBalance)} more
                       </p>
                       <button
                         onClick={() => navigate("/wallet")}
