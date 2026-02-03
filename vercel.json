@@ -15,11 +15,5 @@
       "src": "/(.*)",
       "dest": "/client/dist/index.html"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/autoCheckout",
-      "schedule": "*/2 * * * *"
-    }
   ]
 }
