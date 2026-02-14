@@ -78,10 +78,11 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ParkEase API running on Vercel" });
 });
 
+
+// const PORT = process.env.PORT || 8000;
+
+// server.listen(PORT, () => {
+//   console.log(`✅ ParkEase server running on port ${PORT}`);
+// });
+
 module.exports = app;
-
-const PORT = process.env.PORT || 8000;
-
-server.listen(PORT, () => {
-  console.log(`✅ ParkEase server running on port ${PORT}`);
-});
