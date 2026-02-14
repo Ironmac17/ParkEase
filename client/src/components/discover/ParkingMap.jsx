@@ -82,69 +82,70 @@ export default function ParkingMap({ parkingLots, center, loading }) {
         />
 
         {/* Parking lot markers */}
-        {parkingLots.map((lot) => {
-          if (!lot.location || !lot.location.coordinates) return null;
+        {Array.isArray(parkingLots) &&
+          parkingLots.map((lot) => {
+            if (!lot.location || !lot.location.coordinates) return null;
 
-          const [lng, lat] = lot.location.coordinates;
-          const free = lot?.stats?.freeSpots ?? 0;
-          const total = lot?.stats?.totalSpots ?? 0;
-          const isAvailable = free > 0;
+            const [lng, lat] = lot.location.coordinates;
+            const free = lot?.stats?.freeSpots ?? 0;
+            const total = lot?.stats?.totalSpots ?? 0;
+            const isAvailable = free > 0;
 
-          return (
-            <Marker
-              key={lot._id}
-              position={[lat, lng]}
-              icon={getParkingIcon(isAvailable)}
-            >
-              <Popup>
-                <div className="text-sm font-semibold text-gray-800">
-                  <div className="font-bold text-base mb-2">{lot.name}</div>
-                  <div className="text-xs text-gray-600 mb-2">
-                    {lot.address}
+            return (
+              <Marker
+                key={lot._id}
+                position={[lat, lng]}
+                icon={getParkingIcon(isAvailable)}
+              >
+                <Popup>
+                  <div className="text-sm font-semibold text-gray-800">
+                    <div className="font-bold text-base mb-2">{lot.name}</div>
+                    <div className="text-xs text-gray-600 mb-2">
+                      {lot.address}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs my-2">
+                      <div>
+                        <span className="text-gray-600">Rate:</span>
+                        <br />
+                        <span className="font-semibold text-blue-600">
+                          ₹{lot.baseRate}/hr
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Available:</span>
+                        <br />
+                        <span
+                          className={`font-semibold ${
+                            isAvailable ? "text-green-600" : "text-red-600"
+                          }`}
+                        >
+                          {free}/{total}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Amenities */}
+                    {lot.amenities && (
+                      <div className="text-xs mt-2 pt-2 border-t border-gray-300 space-y-1">
+                        {lot.amenities.covered && <div>🏠 Covered Parking</div>}
+                        {lot.amenities.ev && <div>⚡ EV Charging</div>}
+                        {lot.amenities.security && <div>🔒 24/7 Security</div>}
+                        {lot.amenities.cctv && <div>📹 CCTV</div>}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => navigate(`/parking/${lot._id}`)}
+                      className="block mt-2 w-full text-center bg-blue-500 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-blue-600 transition"
+                    >
+                      Book Now
+                    </button>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs my-2">
-                    <div>
-                      <span className="text-gray-600">Rate:</span>
-                      <br />
-                      <span className="font-semibold text-blue-600">
-                        ₹{lot.baseRate}/hr
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Available:</span>
-                      <br />
-                      <span
-                        className={`font-semibold ${
-                          isAvailable ? "text-green-600" : "text-red-600"
-                        }`}
-                      >
-                        {free}/{total}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Amenities */}
-                  {lot.amenities && (
-                    <div className="text-xs mt-2 pt-2 border-t border-gray-300 space-y-1">
-                      {lot.amenities.covered && <div>🏠 Covered Parking</div>}
-                      {lot.amenities.ev && <div>⚡ EV Charging</div>}
-                      {lot.amenities.security && <div>🔒 24/7 Security</div>}
-                      {lot.amenities.cctv && <div>📹 CCTV</div>}
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => navigate(`/parking/${lot._id}`)}
-                    className="block mt-2 w-full text-center bg-blue-500 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-blue-600 transition"
-                  >
-                    Book Now
-                  </button>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+                </Popup>
+              </Marker>
+            );
+          })}
       </MapContainer>
 
       {/* Map info */}

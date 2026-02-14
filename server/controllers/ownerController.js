@@ -19,7 +19,7 @@ const getOwnerDashboard = async (req, res) => {
     status: "occupied",
   });
 
-  // Today's bookings for revenue
+  // Today's bookings for revenue - reset time to start of day
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
@@ -40,6 +40,8 @@ const getOwnerDashboard = async (req, res) => {
     parkingLot: { $in: lotIds },
     status: { $in: ["confirmed", "active"] },
   }).populate("parkingLot parkingSpot vehicle user");
+
+  console.log(`[Dashboard] Owner: ${ownerId}, Lots: ${lotIds.length}, Today's Bookings: ${todayBookings.length}, Revenue: ₹${todayRevenue}`);
 
   res.json({
     totalLots: parkingLots.length,
@@ -132,14 +134,19 @@ const getOwnerRevenue = async (req, res) => {
   const parkingLots = await ParkingLot.find({ owner: ownerId });
   const lotIds = parkingLots.map((lot) => lot._id);
 
-  const todayStart = new Date();
+  // Today's start (00:00:00)
+  const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
 
-  const weekStart = new Date();
+  // 7 days ago at 00:00:00
+  const weekStart = new Date(now);
   weekStart.setDate(now.getDate() - 7);
+  weekStart.setHours(0, 0, 0, 0);
 
-  const monthStart = new Date();
+  // 30 days ago at 00:00:00
+  const monthStart = new Date(now);
   monthStart.setDate(now.getDate() - 30);
+  monthStart.setHours(0, 0, 0, 0);
 
   const getRevenue = async (from) => {
     const bookings = await Booking.find({
@@ -148,17 +155,22 @@ const getOwnerRevenue = async (req, res) => {
       checkedOutAt: { $gte: from },
     });
 
-    return bookings.reduce(
-      (sum, b) => sum + b.amountPaid + (b.extraAmountPaid || 0),
-      0
-    );
+    return bookings.reduce((sum, b) => {
+      const baseAmount = Number(b.amountPaid) || 0;
+      const extraAmount = Number(b.extraAmountPaid) || 0;
+      return sum + baseAmount + extraAmount;
+    }, 0);
   };
 
-  res.json({
+  const result = {
     today: await getRevenue(todayStart),
     last7Days: await getRevenue(weekStart),
     last30Days: await getRevenue(monthStart),
-  });
+  };
+
+  console.log(`[Owner Revenue] Owner: ${ownerId}, Lots: ${lotIds.length}, Result:`, result);
+
+  res.json(result);
 };
 
 const getRevenueAnalytics = async (req, res) => {

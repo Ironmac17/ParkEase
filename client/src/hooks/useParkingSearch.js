@@ -23,9 +23,15 @@ export default function useParkingSearch() {
   }, [search, filters]);
 
   const fetchLots = async () => {
-    const res = await axios.get("/parking-lots");
-    setParkingLots(res.data);
-    setLoading(false);
+    try {
+      const res = await axios.get("/parking-lots");
+      setParkingLots(Array.isArray(res.data) ? res.data : []);
+      setLoading(false);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setParkingLots([]);
+      setLoading(false);
+    }
   };
 
   const applyFilters = async () => {
@@ -41,9 +47,10 @@ export default function useParkingSearch() {
           endTime: filters.endTime || undefined,
         },
       });
-      setParkingLots(res.data);
+      setParkingLots(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Filter error:", err);
+      setParkingLots([]);
     }
   };
 

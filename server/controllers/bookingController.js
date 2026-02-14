@@ -198,13 +198,16 @@ const createBooking = async (req, res) => {
     status: "occupied",
   });
 
-  // � Broadcast booking creation to all admins and owner
-  global.io.emit("booking:created", {
-    bookingId: booking._id,
-    userId: booking.user,
-    parkingLotId: heldSpot.parkingLot,
-    amount: bookingAmount,
-  });
+  // Get parking lot owner to emit to their room
+  const lot = await ParkingLot.findById(heldSpot.parkingLot).select("owner");
+  if (lot && lot.owner) {
+    global.io.to(`owner_${lot.owner}`).emit("booking:created", {
+      bookingId: booking._id,
+      userId: booking.user,
+      parkingLotId: heldSpot.parkingLot,
+      amount: bookingAmount,
+    });
+  }
 
   // �🔟 Final response (include updated wallet balance so client can refresh)
   res.status(201).json({ booking, walletBalance: updatedWalletBalance });
@@ -256,6 +259,16 @@ const checkInBooking = async (req, res) => {
   booking.checkedInAt = new Date();
   await booking.save();
 
+  // Notify owner of check-in
+  const lot = await ParkingLot.findById(booking.parkingLot).select("owner");
+  if (lot && lot.owner) {
+    global.io.to(`owner_${lot.owner}`).emit("booking:updated", {
+      bookingId: booking._id,
+      status: "active",
+      checkedInAt: booking.checkedInAt,
+    });
+  }
+
   res.json(booking);
 };
 
@@ -303,13 +316,17 @@ const checkOutBooking = async (req, res) => {
   spot.status = "available";
   await spot.save();
 
-  // 📢 Broadcast booking completion to admins and owner
-  global.io.emit("booking:completed", {
-    bookingId: booking._id,
-    userId: booking.user._id,
-    parkingLotId: booking.parkingLot,
-    status: "completed",
-  });
+  // Get parking lot owner to emit to their room
+  const lot = await ParkingLot.findById(booking.parkingLot).select("owner");
+  if (lot && lot.owner) {
+    global.io.to(`owner_${lot.owner}`).emit("booking:completed", {
+      bookingId: booking._id,
+      userId: booking.user._id,
+      parkingLotId: booking.parkingLot,
+      status: "completed",
+      extraAmount: extraAmount,
+    });
+  }
 
   sendEmail({
     to: booking.user.email,
@@ -373,6 +390,15 @@ const cancelBooking = async (req, res) => {
         spotId: spot._id,
         status: "available",
       });
+  }
+
+  // Notify owner of cancellation
+  const lot = await ParkingLot.findById(booking.parkingLot).select("owner");
+  if (lot && lot.owner) {
+    global.io.to(`owner_${lot.owner}`).emit("booking:cancelled", {
+      bookingId: booking._id,
+      status: "cancelled",
+    });
   }
 
   res.json({ message: "Booking cancelled and refunded" });

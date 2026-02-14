@@ -24,17 +24,25 @@ const OwnerDashboard = () => {
   const [data, setData] = useState(null);
   const [revenueData, setRevenueData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const fetchDashboard = async () => {
     try {
+      setError(null);
       const [dashRes, revRes] = await Promise.all([
         getOwnerDashboard(),
         getOwnerRevenue(),
       ]);
-      setData(dashRes.data);
-      setRevenueData(revRes.data);
+
+      if (dashRes.data) {
+        setData(dashRes.data);
+      }
+      if (revRes.data) {
+        setRevenueData(revRes.data);
+      }
     } catch (err) {
       console.error("Failed to load owner dashboard", err);
+      setError(err.message || "Failed to load dashboard");
     } finally {
       setLoading(false);
     }
@@ -42,22 +50,33 @@ const OwnerDashboard = () => {
 
   useEffect(() => {
     fetchDashboard();
+    // Refresh dashboard every 30 seconds for real-time updates
+    const interval = setInterval(fetchDashboard, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     if (!user || !socket) return;
 
     socket.emit("join_owner", user._id);
-    socket.on("booking:created", fetchDashboard);
-    socket.on("booking:completed", fetchDashboard);
-    socket.on("booking:updated", fetchDashboard);
-    socket.on("spot_update", fetchDashboard);
+
+    const handleBookingUpdate = () => {
+      console.log("Booking update detected, refreshing dashboard...");
+      fetchDashboard();
+    };
+
+    socket.on("booking:created", handleBookingUpdate);
+    socket.on("booking:completed", handleBookingUpdate);
+    socket.on("booking:updated", handleBookingUpdate);
+    socket.on("booking:cancelled", handleBookingUpdate);
+    socket.on("spot_update", handleBookingUpdate);
 
     return () => {
-      socket.off("booking:created", fetchDashboard);
-      socket.off("booking:completed", fetchDashboard);
-      socket.off("booking:updated", fetchDashboard);
-      socket.off("spot_update", fetchDashboard);
+      socket.off("booking:created", handleBookingUpdate);
+      socket.off("booking:completed", handleBookingUpdate);
+      socket.off("booking:updated", handleBookingUpdate);
+      socket.off("booking:cancelled", handleBookingUpdate);
+      socket.off("spot_update", handleBookingUpdate);
     };
   }, [user, socket]);
 
@@ -71,12 +90,14 @@ const OwnerDashboard = () => {
       </div>
     );
   }
-
+//
   if (!data) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0b0f1a] to-[#1a1f2e] flex items-center justify-center p-4">
         <div className="text-center">
-          <p className="text-gray-400 mb-4">Unable to load dashboard</p>
+          <p className="text-gray-400 mb-4">
+            {error ? `Error: ${error}` : "Unable to load dashboard"}
+          </p>
           <button
             onClick={fetchDashboard}
             className="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-lg text-white"
@@ -88,16 +109,21 @@ const OwnerDashboard = () => {
     );
   }
 
-  const { totalLots, totalSpots, occupiedSpots, todayRevenue, activeBookings } =
-    data;
+  const {
+    totalLots,
+    totalSpots,
+    occupiedSpots,
+    todayRevenue = 0,
+    activeBookings = [],
+  } = data;
   const occupancyRate =
     totalSpots > 0 ? Math.round((occupiedSpots / totalSpots) * 100) : 0;
 
   const chartData = revenueData
     ? [
-        { name: "Today", revenue: revenueData.today },
-        { name: "7 Days", revenue: revenueData.last7Days },
-        { name: "30 Days", revenue: revenueData.last30Days },
+        { name: "Today", revenue: revenueData.today || 0 },
+        { name: "7 Days", revenue: revenueData.last7Days || 0 },
+        { name: "30 Days", revenue: revenueData.last30Days || 0 },
       ]
     : [];
 
@@ -110,14 +136,23 @@ const OwnerDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-[#0b0f1a] to-[#1a1f2e] p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Owner Dashboard
-          </h1>
-          <p className="text-gray-400">
-            Welcome back, {user?.username}! Manage your parking lots and track
-            revenue.
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">
+              Owner Dashboard
+            </h1>
+            <p className="text-gray-400">
+              Welcome back, {user?.username}! Manage your parking lots and track
+              revenue.
+            </p>
+          </div>
+          <button
+            onClick={fetchDashboard}
+            disabled={loading}
+            className="bg-blue-500/20 hover:bg-blue-500/30 disabled:opacity-50 text-blue-400 px-4 py-2 rounded-lg transition font-semibold"
+          >
+            {loading ? "Updating..." : "Refresh"}
+          </button>
         </div>
 
         {/* Stats Grid */}
@@ -172,7 +207,10 @@ const OwnerDashboard = () => {
               <div>
                 <p className="text-gray-400 text-sm mb-2">Today's Revenue</p>
                 <p className="text-3xl font-bold text-white">
-                  ₹{todayRevenue.toLocaleString()}
+                  ₹
+                  {(todayRevenue || 0).toLocaleString("en-IN", {
+                    maximumFractionDigits: 0,
+                  })}
                 </p>
               </div>
               <div className="bg-green-500/20 p-3 rounded-lg">
