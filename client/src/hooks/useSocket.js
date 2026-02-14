@@ -7,7 +7,7 @@ let socketInstance = null;
 const initializeSocket = () => {
   if (socketInstance) return socketInstance;
 
-  socketInstance = io(import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "http://localhost:8000", {
+  socketInstance = io(import.meta.env.VITE_SOCKET_URL, {
     transports: ["websocket", "polling"],
     reconnection: true,
     reconnectionDelay: 1000,
