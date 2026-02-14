@@ -79,10 +79,10 @@ app.get("/api/health", (req, res) => {
 });
 
 
-// const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 8000;
 
-// server.listen(PORT, () => {
-//   console.log(`✅ ParkEase server running on port ${PORT}`);
-// });
+server.listen(PORT, () => {
+  console.log(`✅ ParkEase server running on port ${PORT}`);
+});
 
-module.exports = app;
+// module.exports = app;
