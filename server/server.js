@@ -43,7 +43,13 @@ const io = new Server(server, {
 global.io = io;
 initSocket(io);
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://park-ease-adxj.vercel.app"
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
